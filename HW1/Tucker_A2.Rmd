@@ -1,0 +1,134 @@
+---
+title: "Tucker_A2"
+author: "Michael Tucker"
+date: "January 24, 2020"
+output: 
+  html_document: 
+    code_folding: hide
+    theme: cerulean
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    number_sections: false
+---
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 14px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px
+}
+pre{/*preformatted text*/ 
+    font-size: 12px
+}
+p.caption {/* figure captions */ 
+    font-size: 0.9em;
+    font-style: upright 
+} 
+</style>
+
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+library(knitr)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  ",
+               collapse=TRUE, 
+               #echo=FALSE,
+               fig.asp=1/gr,
+               dev="png"
+               )
+```  
+
+
+
+
+
+
+
+
+# Exercise 2.0 
+(not in text, 5 points) List the technical terms you noticed while reading this chapter, with a question mark before the ones you haven't encountered before. **Hint:** Technical terms are often italicized where first introduced. Now look up at least one of the terms that are new to you---Wikipedia is always a good place to begin---and give a definition that makes sense to you.  
+
+# Solution 2.0  
+Unknown vocab
+
+* *desiderata*  
+  + (plural of desideratum) objects of desire, something wanted  
+* *highest density interval*  
+  + another way of expressing uncertainties, usually at 95% (2sigma) confidence  
+* *posterior predictive check*   
+  + seems to just be a fancy way of saying "does the fit makes sense"  
+
+# Exercise 2.1  
+(page 31, 5 points)  If you haven't coded before, don't bother making plots. Otherwise, please try plotting the various models. Remember that the independent variable is discrete, so a line plot is inappropriate, but bar plots and point plots are OK.  
+
+# Solution 2.1  
+(Put your plots and narrative here. Make your narrative $\le$ 100 words.)   
+
+We know that $x \in [1,4]$, of which one will be "picked". Models:
+
+Model A: $p(x)=0.25$  
+Model B: $p(x)=x/10$  
+Model C: $p(x)=0.48x=(12/25)x$  
+
+
+(unfortunately havent learned how to operate on arrays/vectors in r yet, so code below is kinda sloppy)  
+
+```{r sol2.1}
+x_vals <- c(1,2,3,4)
+modelA_vals <- c()
+modelB_vals <- c()
+modelC_vals <- c() 
+for (x in x_vals) {
+  modelA_vals <- append(modelA_vals, 0.25)
+  modelB_vals <- append(modelB_vals, x/10.)
+  modelC_vals <- append(modelC_vals, 12./25.*x)
+}
+
+#normalize so sum(p(x)) == 1, only modelC_vals needs normalization
+modelC_vals <- modelC_vals / sum(modelC_vals)
+
+test1 <- rbind(modelA_vals, modelB_vals, modelC_vals)
+
+barplot(test1, beside=T, xlab="x", ylab="p(x)", col=c('red','blue','green'), 
+        legend=c('modelA', 'modelB', 'modelC'))
+```
+
+### Biases
+ModelA: Assumes no bias among sides (e.g., a fair die)  
+ModelB/C: Assumes linearly-increasing dependence for higher values, which could be reasonable if dots are marked by heavy insets   
+
+# Exercise 2.2  
+(page 31, 5 points)  Answer in narrative with $\le$ 100 words. 
+
+# Solution 2.2  
+Heavily favors the first model, as the results are uniform across all values. Does not exclude the other models completely, but just does not lend them extra credence.  
+
+For the second trial, the data are not consistent with any model, but of course we must consider which model they agree with the most/least. The results are opposite of models B and C, which have increasing $p(x)$ with increasing $x$, whereas modelA has a flat distribution. Again, we conclude modelA represents the data best *of the given models*, but the level of disagreement warrants further model analysis.  
+
+# Exercise 2.3  
+(Not in our text, 5 points) Consider Figure 2.6, p. 29, in DBDA2E (our text). Two of the data points fall above the vertical bars. Does this mean that the model does not describe the data well? Explain. **Hint:** How many data points are there? Since the credible predicted intervals are for 95%, how many data points might reasonably be expected to fall outside those intervals?  
+
+# Solution 2.3  
+
+There at 57 data points with 2 outliers for 95% confidence. To determine goodness-of-fit and if the model adequately describes the data, check if the outliers are consistent with just noisy data. For 95% confidence, expect roughly 5% of points to extend beyond the quoted error bars. 5% of 57 points is `r 57*0.05`, which is (coincidentally) in agreement with the two outliers we see in Fig. 2.6. Of course, a more robust analysis would consider not only how many outliers, but alos the strength of the outlyiers, but we'll save that nonsense for another time. 
+
+# Et cetera  
+If you have a question or suggestion, tell me here.
