@@ -1,0 +1,1769 @@
+---
+# Note: YAML uses R-style commenting
+title: "A-Examples"
+author: "Neil Frazer"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document: 
+    code_folding: hide
+    theme: cerulean
+    toc: true
+    smooth_scroll: false
+    toc_depth: 2
+    toc_float: true
+    number_sections: true
+---
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 14px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px
+    }
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ font-size: 12px}
+/* use <pre>...</pre> for preformatted text.*/
+pre{ font-size: 12px}
+p.caption {/* figure captions */ 
+    font-size: 1.0em;
+    font-style: italic; 
+} 
+</style>
+
+```{r setup, include=FALSE}
+## This is the setup chunk.
+rm(list=ls()) # clean up
+library("knitr")
+library("gtools")
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  >",     # indent chunk output
+               collapse=TRUE,     # embed output
+               echo=TRUE,         # show code
+               fig.width=6,       # R's figure width in inches
+               fig.asp=1/gr,      # figure aspect ratio
+               out.width="90%",   # figure width in html
+               fig.align="center",
+               dev="png",         # portable network graphics
+               fig.retina=2)  
+
+# opts_knit$set(eval.after="fig.cap") # evaluate fig.cap after the chunk
+options(digits=4) # affects print(), text(), mtext(), etc.
+```  
+
+# Introduction {-}  
+Click in the table of contents (toc) entries at left to navigate around. If the toc doesn't appear on the left, make your browser window a bit wider. Notice that this Rmd specifies _code-folding_ in the YAML headers, so you can hide or show chunks of code in the html by clicking on the buttons on the right side of the page. If you find that it takes longer to knit than you like, and you are only interested in a few chunks, try setting `eval=FALSE` in the `opts_chunk$set()` call in the setup chunk, then set `eval=TRUE` in the headers of the particular chunks you want evaluated. A partial alternative is to call `knit_exit()` at some point.  
+
+# Disclaimer {-} 
+
+The examples in this document are in no particular order, so the complicated ones are mixed up with the simple ones. Do not be put off if a chunk in this document has many lines of code---I often do things in small steps in order to clarify what is happening, which makes the code much longer than it needs to be. Also, because my background is in languages like Fortran and Matlab I tend to use for-loops more frquently than an experienced R programmer would use them. Garrett Grolemund, the author of _Hands-On Programming with R_ would probably say of my coding examples that I am "speaking R with a C accent."  
+
+# R Markdown  
+
+None of the books on R Markdown are suitable for a text, but the [chapter on R Markdown](https://r4ds.had.co.nz/r-markdown.html) in [R for Data Science](https://r4ds.had.co.nz) is a terrific review. I wish I had known about it earlier.  
+
+Yan Holtz gives another excellent introduction to R Markdown [here](https://holtzy.github.io/Pimp-my-rmd/).  
+
+## Hanging indents  
+
+In case you want a list (of references, say) with hanging indents, here is one way to do it: put `.hi{ padding-left:22px; text-indent:-22px}` in the CSS, then begin your references section with `<div class="hi">`, and end it with `</div>`.  
+
+# RStudio code navigator   
+Now that we are working with larger R Markdown files, don't forget the code navigator menu at the bottom left of the RStudio editor window. If your cursor is in a chunk, there will be a little green box with a **C** in it followed by some text and tiny up-down arrows. Click on those little arrows to get a pull-down menu showing headers and chunk labels, then select where you want to go. For more tips like this see [here](https://r4ds.had.co.nz/r-markdown.html#code-chunks).  
+
+# switch()  
+Peter Meissner gives the following example on [StackOverflow](https://stackoverflow.com/questions/10393508/how-to-use-the-switch-statement-in-r-functions).  
+```{r switch1}
+# the various ways of switch() 
+# by index
+switch(1, "one", "two") 
+
+# by index with complex expressions
+switch(2, {"one"}, {"two"}) 
+
+# by index with complex named expression
+switch(1, foo={"one"}, bar={"two"}) 
+
+# by name with complex named expression
+switch("bar", foo={"one"}, bar={"two"}) 
+```  
+
+Elsewhere on [StackOveflow](https://stackoverflow.com/questions/7825501/switch-statement-usage?noredirect=1&lq=1) Tommy adds the following example to show just how versatile `switch()` is.  
+
+```{r, switch2}
+switch("case1", case1=1, case2=, case3=2.5, 99) # 1
+switch("case2", case1=1, case2=, case3=2.5, 99) # 2.5
+switch("case3", case1=1, case2=, case3=2.5, 99) # 2.5
+switch("case4", case1=1, case2=, case3=2.5, 99) # 99
+```  
+Notice how this maps case2 and case3 to 2.5 and the (unnamed) default to 99. For more information, try `?switch`.  
+
+# Figure size  
+
+## Summary  
+In the setup chunk include the following code:  
+
+    opts_chunk$set(out.width="70%", # or out.width=0.7
+                   fig.align="center",
+                   fig.width=6,
+                   fig.asp=0.618)
+                   
+Then in individual plots adjust only `fig.asp`; increase it if you want a taller figure and reduce it if you want a shorter figure.  
+
+## fig.width, fig.height    
+
+These two chunk options control the size in inches of the figure created by R.  
+
+If you make `fig.width` small, for example `fig.width=4`, then when the figure is expanded by R Markdown the print and symbols will be larger. Conversely, if you make `fig.width` large, for example `fig.width=8`, then the print and symbols will be smaller in R Markdown. 
+ 
+To illustrate, here is a figure with enlarged print and symbols. In the chunk header I put `fig.width=4` and `fig.asp=0.618`.  
+
+```{r fig.width=4, fig.asp=0.618, fig.cap="**Figure.** For this figure I used the chunk options `fig.width=4`, and `fig.asp=0.8`. The `plot()` call is identical to that of the next figure."}
+par(mar=c(5,4,2,2))
+plot(mtcars$wt, mtcars$mpg, main="",
+     xlab="weight (1,000 lbs)", 
+     ylab="miles per gallon")
+```  
+
+... and here is the same figure with smaller print and symbols. In this chunk header I put `fig.width=8` and `fig.asp=0.618`.  
+```{r fig.width=8, fig.asp=0.618, fig.cap="**Figure.** For this figure I used the chunk options `fig.width=8`, and `fig.asp=0.618`. The `plot()` call is identical to that of the previous figure."}
+par(mar=c(6,4,2,2))
+plot(mtcars$wt, mtcars$mpg, main="",
+     xlab="weight (1,000 lbs)", 
+     ylab="miles per gallon")
+```  
+
+Notice that the plot call is the same and that the figures are the same size, or nearly so, but that the larger print and margins in the first figure have resulted in a smaller axis system.  
+
+## out.width, out.height  
+
+These two chunk options are specified as fractions, or percentages, of page width.  
+
+In [R for Data Science](https://r4ds.had.co.nz/graphics-for-communication.html), Section 28.7.1, Wickham and Grolemund suggest fixing `out.width` at a particular value (0.8, say) and thereafter controlling print size using `cex` and its relatives rather than `fig.width`. They conclude with the following statement:  
+
+> If you want to make sure the font size is consistent across all your figures then whenever you adjust `out.width` you’ll also need to adjust `fig.width` to maintain the same ratio with your default `out.width`. For example, if your default `fig.width` is 6, and your default `out.width` is 90%, when you set `out.width = "50%"` in a chunk header you’ll need to set `fig.width` to `6 * 0.5 / 0.9` there.  
+
+## more out.width  
+
+To put two figures side by side, use `out.width=c("50%", "50%")`, or some combination of percentages that sums to 100%. One can also put figures side by side with `par(mfrow=c(1,2))`. 
+
+There is also a way to layout irregular sized figures that isn't limited to rows and columns---see Paul Murell's book _R Graphics_.  
+
+There is also a way to put two images sided by side using R Markdown table syntax. The following is an example from [github](https://github.com/rstudio/rmarkdown/issues/303) that I have not run.  
+
+~~~
+|   |   |
+| :---: | :---: |
+| ![](sin.png)  | ![](cos.png) |
+| *a* | *b* |
+
+![(\#fig:sin-cos) Sinus (a) and cosinus (b)](1x1.png)
+~~~
+
+# Git  
+For version control and code sharing, Git is the answer. Jenny Bryan's book titled [Happy Git and Github for the UseR](https://happygitwithr.com) tells us how.  
+
+# Arrows  
+Base R has ugly arrows, as you can see in the following figure, but {shape} has nice ones.  
+```{r}
+par(mfrow=c(1,3))
+plot(c(0:10),type="n", ann=FALSE, axes=FALSE)
+title("Base R")
+
+arrows(1,0,2,1,length=0.2,angle=20)
+arrows(1,1,2,2,length=0.1,angle=40,lwd=3)
+
+invisible(mapply(arrows,
+        rep(c(3,6),each=4),rep(3:6,2),
+        rep(c(5,8),each=4),rep(5:8,2),
+        angle=seq(10,40,length.out=8),
+        length=rep(seq(0.1,0.3,length.out=4),2),
+        lwd=rep(1:4,each=2))
+)
+## -------------------------------------------------------
+library(shape)
+plot(c(0,2),c(-2,2), col=NA, type="n", ann=FALSE, axes=FALSE)
+Arrows(c(0,1.7),c(1.3,-1.8),c(0.8,1.1),c(1.2,-1), lwd=2)
+title("{shape}")
+## -------------------------------------------------------
+library(TeachingDemos)
+
+ms.arrowhead <- function(angle, ...) {
+  xy <- cbind( c(-1, -0.75, -1, 0), 
+               c(-0.5, 0, 0.5, 0) )
+  xy <- xy %*% matrix(c(cos(angle),-sin(angle),sin(angle),cos(angle)), 2)
+  xspline(xy, shape=c(0, -1, 0, 0), open=FALSE, ...)
+}
+
+plot(1:10, 1:10, type="n", ann=FALSE, axes=FALSE)
+title("{TeachingDemos}")
+my.symbols(1:10, 1:10, ms.arrows, angle=seq(pi, 0, length=10),
+           col='blue', adj=1, length=0, symb.plots=TRUE)
+my.symbols(1:10, 1:10, ms.arrowhead, angle= seq(pi, 0, length=10), 
+           col='green', inches=0.5, lwd=2, symb.plots = TRUE)
+```
+
+# tibbles  
+The tibble package is part of the core tidyverse, so if you have the tidyverse package loaded you can use them. For a useful introduction, load the tibble package then type `vignettee(tibble)` in the console; the results will appear in the help window of RStudio. For more examples, see Chapter 7 of Wickham & Grolemund "R for Data Science" (2017). The `tribble()` function allows one to type in a tribble row by row instead of column by column.  
+
+# isTRUE( ), isFALSE( )  
+You never have to write `if(x==TRUE)` because if x is TRUE then `if(x)` does the same thing. The `if()` function coerces any nonzero numeric value to logical TRUE, which is often useful, but when you want to make sure that x is really a **logical** quantity rather than, say, a numeric quantity, use `isTRUE()`. Similarly for `isFALSE()`. The following chunk illustrates this.   
+```{r isTRUE}
+x <- 5
+if(x) cat("x is TRUE!\n") else cat("x is FALSE!\n")
+
+x <- -3.2
+if(x) cat("x is TRUE!\n") else cat("x is FALSE!\n")
+
+x <- -87.8
+if(isTRUE(x)) cat("x is TRUE!\n") else cat("x is FALSE!\n")
+
+x <- TRUE
+if(isTRUE(x)) cat("x is TRUE!\n") else cat("x is FALSE!\n")
+```  
+
+From the help entry titled Logic {base} we have `isTRUE(x)` is the same as `{ is.logical(x) && length(x) == 1 && !is.na(x) && x }`; `isFALSE()` is defined analogously. Consequently, `if(isTRUE(cond))` may be preferable to `if(cond)` because of NAs.
+
+# Topics  
+## IBMs in R.  
+There are lots of packages in R to do individual based models (IBM's) but in order to understand them it is helpful to be able to write your own first. Brad Duthie shows us how to do that [here](https://bradduthie.github.io/blog/individual-based-models-in-r/).  
+
+## Basic utilities
+typeof(), mode(), class(), c(), vector(), rep(), ls(), is.na(), is.vector(), is.atomic(), exists(), str(), head(), tail(), which(), na.rm(), unique(), args(), %in%, is.na(), dim(), View(), class(), unclass(), args(), object.size(), rep(), list(), dim(), attr(), attributes(), inherits(), getS3method(), ls.str(), lsf.str(), source(), structure(), replace(), reorder(), search(),   
+
+## Math utilities    
+seq(), matrix(), sum(), cumsum(), diff(), numeric(), is.numeric(), as.double(), is.finite(), is.infinite(), is.nan(), sum(), cumsum(), diff(), sort(), order(), min(), max(), range(), which.min(), which.max(), median(), mad(), mean(), sd(), weighted.mean(), outer(), which is also available as the infix operator %o%, scale()   
+
+## logical utilities  
+any(), all(), identical(), isTRUE(), isFALSE(), xor(), %in%, as.logical(), ifelse(), is.na(), is.language(), is.atomic(), etc.   
+
+## string utilities  
+as.character(), is.character(), nchar(), paste(), paste0(), substr(), strsplit(), strwidth(), substring(), toupper(), tolower(), chartr(), nchar(), nzchar()  
+
+## control flow  
+if, if-else, for, while, repeat, break, next, switch(), ifelse()  
+
+## data wrangling  
+cut(), scale(), data(), na.omit(), na.fail(), na.exclude(), na.pass(), names(), head(), tail(), subset(), split(), as.factor(), summary(), unique()
+
+## factors  
+interaction(), split(), unsplit(),  
+
+## simulation  
+set.seed(), sample()  
+
+## graphics  
+par(), plot(), lines(), points(), pairs(), boxplot(), barplot(), hist(), matplot(), matlines(), matpoints(), abline(), bquote(), expression(), substitute(),    
+
+## I/O  
+
+The following is a very incomplete list: format(), data(), read.table(), write.table(), save()-load(), dump()-source(), download.file()   
+
+For a brief but thorough overview, with great advice, see Appendix D (page 199) of [Hands-On Programming with R](https://rstudio-education.github.io/hopr/) by Grolemund and Wickham. 
+
+## debugging  
+mode(), typeof(), class(), head(), str(), length(), dim(), dimnames(), stopifnot(), stop(), try(), warning(), eval(),    
+
+## behavior  
+options(), getOption(), invisible(), c() makes a variable visible again.  
+ 
+## functions  
+The R evaluation model involves the concepts of formals, promises, forced evaluation, lazy evaluation    
+eval(), call(), invisible(), Recall(), body(), args(), .Call(), missing(), message(), promises::is.promise(), parse(), deparse(), assign(), 
+
+## options  
+options(), getOption(), prompt, digits, width, scipen, stringsAsFactors, verbose, warn, warnPartialMatchArgs, warnPartialMatchAttr, warnPartialMatchDollar, matprod,   
+
+## options for {parallel}  
+mc.cores
+
+# capitalize & replace     
+
+## capitalize string  
+Here is a little function called `cap()` that capitalizes the first letter of a word.  
+```{r cap}
+cap <- function(s){ # capitalize first letter of string s
+  s1 <- substring(s, first=1, last=1)
+  s1 <- toupper(s1)
+  s2 <- substring(s, first=2)
+  paste0(s1,s2)
+}
+```  
+
+We take a test drive.  
+```{r testcap}
+cap("mary")
+cap("the quick brown fox")
+```
+If we wanted to capitalize the first letter of each word, we would use capword {gtools}, as in the following example.  
+
+## capitalize sentence   
+To capitalize each word in a sentence, we use `gtools::capword()`. If you want words such as "and" and "to" capitalized, set `AP` to FALSE in the call.   
+```{r capword}
+require("gtools")
+capwords("a function to capitalize words in a title")
+capwords("a function to capitalize words in a title", AP=FALSE)
+```  
+
+## substitute characters  
+To replace specified characters by other characters use chartr {base}. The following examples are from the help entry for `chartr()`.   
+```{r chartr}
+x <- "MiXeD cAsE 123"
+chartr("iXs", "why", x)
+chartr("a-cX", "D-Fw", x)
+tolower(x)
+toupper(x)
+```
+
+# outer( )  
+The outer() function in {base} takes the outer product of vectors and arrays. It can be called in the usual way, or as an infix operator. It has a third argument called `FUN` that defaults to multiplication "*".   
+```{r outer}
+x <- 1:3
+y <- 4:7
+outer(x, y)
+
+x %o% y
+class( x%o% y)
+```   
+
+
+# contour( )  
+The contour {graphics} function produces a contour plot similar to a topographic map. Here is an example from page 46 of James et al. "An Introduction to Statistical Learning."  
+```{r contour}
+y <- x <- seq(0, 2, 0.01)
+f = outer(x, y, function(x,y) cos(y/2)/(1+x^2))
+fa <- (f-t(f))/2
+contour(x, y, fa, nlevels=5)
+## add more contours
+contour(x, y, fa, nlevels=20, add=TRUE)
+```  
+
+# image( )  
+The image function in {graphics} works like `contour()` except that it produces a color coded plot.  
+```{r image}
+y <- x <- seq(0, 2, 0.01)
+f = outer(x, y, function(x,y) cos(y/2)/(1+x^2))
+fa <- (f-t(f))/2
+image(x,y,fa)
+```
+
+
+# persp( )  
+The persp function in {graphics} is like contour and image, except that it produces a perspective plot. The arguments theta and phi control the angles from which the plot is viewed.
+```{r persp}
+par(mar=c(1,1,1,1))
+y <- x <- seq(0, 2, 0.1)
+f = outer(x, y, function(x,y) cos(y/2)/(1+x^2))
+fa <- (f-t(f))/2
+persp(x, y, fa, theta=30, phi=20, col="skyblue")
+```
+
+
+# switch( )  
+The following example is from [StackOverflow](https://stackoverflow.com/questions/10393508/how-to-use-the-switch-statement-in-r-functions/31449923).  I'm not sure I like the formatting.   
+```{r switch}
+AA = 'foo'
+switch(AA, 
+foo={
+  # case 'foo' here...
+  print('foo')
+},
+bar={
+  # case 'bar' here...
+  print('bar')    
+},
+{
+   print('default')
+}
+)
+```
+
+
+# Graphics state    
+If you type `par()` in the console you will see the full list of graphics state parameters, but without their meanings. To see their meanings look in the help entry for `par()`. Two of the most useful parameters for plotting are `mar`, a 4-vector giving the size of the _inner plot margins_, and `oma` a 4-vector giving the size of the _outer plot margins_, both in units of lines. Both the inner and outer margins are numbered 1 through 4, proceeding clockwise from the x-axis.  
+```{r par}
+par()$mar
+par()$oma
+```
+
+# Plot margins  
+The inner margins are where the axis labels and title get written. As you saw above, the inner margin default values are `r par()$mar`. The outer margins are zero by default, as you also just saw; they are seldom needed unless you are making a multipanel plot, considered below. The following figure is taken from an [R-Bloggers entry](https://www.r-bloggers.com/mastering-r-plot-part-3-outer-margins/) by Lionel Hertzog. Notice the use of `par()$mar[i]` to retrieve the size of the *i*^th^ margin, and how `floor()` is used to round it down to an integer suitable for the upper limit of a for-loop. Notice that `mtext()` can be used to annotate margins, and that the default value of its `outer` argument is `FALSE`.   
+
+```{r margins}
+## By default there are no outer margins...
+par()$oma # [1] 0 0 0 0
+##...but we can add some
+op<-par(no.readonly=TRUE) 
+par(oma=c(2,2,2,2)) 
+
+## create figure with no axes or labels
+plot(1, 1, type="n", ann=F, xaxt="n", yaxt="n")
+## Write stuff in the inner and outer margins
+for(side in 1:4){
+  inner <- floor(par()$mar[side]) - 1
+  for(line in 0:inner)
+    mtext(text=paste0("Inner line ", line), 
+          side=side, line=line)
+  outer <- floor(par()$oma[side]) - 1
+  for(line in 0:inner) 
+     mtext(text=paste0("Outer line ", line),
+           side=side, line=line, outer=TRUE)
+}
+```
+
+# Multipanel plots  
+Multipanel plots are trivial to make. For example, if you want a 2 x 2 matrix of plots, simply put `par(mfrow=c(2,2))` ahead of any `plot()` calls. I usually make the `par()` call the first line of my chunk. Here is a multipanel plot adapted from Lionel Hertzog, referenced above. Recall that `type="n"` in a `plot()` call means "do not plot anything", and `ann=FALSE` means "do not make labels or a title."    
+
+```{r mfrow}
+par(mfrow=c(2,2), mar=c(3,3,2,2), oma=c(3,3,3,0))
+
+for (i in 1:4) 
+  plot(1, 1, type="n", ann=FALSE)
+
+mtext(text="A common x-axis label",
+      side=1, line=0, outer=TRUE)
+mtext(text="A common y-axis label",
+      side=2, line=0, outer=TRUE)
+mtext(text="A common plot title",
+      side=3, line=0, outer=TRUE)
+```  
+
+# Legends  
+If there is more than one type of information on the plot (data and a fit, say) then there should be an informative legend, and the y-label may require thought; for example, if both data types on the plot have the same units, meters, say, your y-axis label might be "y~1~, y~2~ (meters)".  
+
+The secret of painless legends, I find, is to make each `legend()` argument a vector whose length is the same as the number of elements on the graph. As an example, consider the legend in the following plot.  
+
+We haven't bothered to include them here, but the original plot had two graph elements: a solid black line, and an area shaded with magenta. To represent the shaded area in the legend we use point character number 15 (a solid block with no border), magnified by a factor 1.8 to emphasize that it refers to an area rather than a point. Notice that the `legend()` arguments `lty` (line type), `col` (color), `pch` (point character), `pt.cex` (point character size), and `legend` (text) are all vectors of length 2, and that `NA` is used wherever one of the two elements is irrelevant. If there were a third element on the plot, a set of data points for example, we would want a third legend entry, and all of the 2-vectors would be 3-vectors.  
+
+```{r legends1, fig.cap="**Figure 1.** Demonstrating the use of legend( ). Nothing is plotted as we are interested only in the legend. See the solution to ERTH 615, Assignment 5, Exercise 12, for the complete plot."}
+## some liptstick here...ignore it
+par(mar=par("mar") - c(1, 0, 1.5, 0)) # reduce margins 1 & 3
+par(mgp=par("mgp") - c(0.7, 0.3, 0) ) # labels closer to axes
+## yet more lipstick...ignore it
+plot(data.frame(x=1, y=1), 
+     type="n", # don't bother to graph anything
+     xaxs="i", yaxs="i", # internal axes best for dense grids
+     panel.first=grid(nx=8, ny=8)) # grid *behind* graph
+## finally the legend...
+leg1 <- "Rayleigh PDF"; leg2 <- "Pr(4 < x ≤ 6)"
+legend(x="topright", # legend position
+       box.lty=1,    # make box around legend a solid line...
+       box.lwd=1,    # ...of width 1.  
+       inset=c(0.06,0.08), # Inset the legend from the plot boundary
+       bg="white",   # occlude the grid
+       lty    = c(   1    ,   NA      ), # line types
+       col    = c("black" ,"magenta"  ), # colors
+       pch    = c(  NA    ,   15      ), # point characters
+       pt.cex = c(  NA    ,   1.8     ), # point character size
+       legend = c( leg1   ,  leg2     )) # text entries
+```  
+
+## legend madness  
+It's a little known fact (because nobody reads help entries in full) that `legend()` returns invisibly a list, which contains a list called `rect` with entries named `w`, `h`, `left`, and `top`; these are, respectively, the width and height of the legend box and the x- and y-values of the upper left corner of the box, all in user coordinates. To avoid real work, we use this to put a drop shadow beneath the legend. Psychologists refer to this type of thing as _displacement activity_.
+
+```{r legends2, fig.cap="**Figure 2.** Demonstrating the use of legend( ). Nothing is plotted as we are interested only in the legend. The point of this figure is to utilize the values returned by legend() in order to give it a drop-shadow."}
+## same liptstick here as above...ignore it
+par(mar=par("mar") - c(1, 0, 1.5, 0)) # reduce margins 1 & 3
+par(mgp=par("mgp") - c(0.7, 0.3, 0) ) # labels closer to axes
+## more of the same lipstick...ignore it
+plot(data.frame(x=1, y=1), 
+     type="n", # don't bother to graph anything
+     xaxs="i", yaxs="i", # internal axes best for dense grids
+     panel.first=grid(nx=8, ny=8)) # grid *behind* graph
+
+## Finally the legend...
+## We make it into a function so we can call it twice.
+## The first call is just to get the returned values so
+## we can use them to make a drop-shadow.
+## The second call then plots the legend over the shadow.  
+myLeg <- function(plt=TRUE) {
+  leg1 <- "Rayleigh PDF"; leg2 <- "Pr(4 < x ≤ 6)"
+  rt <- # the list returned by legend
+  legend(x="topright", # legend position
+       plot=plt,
+       box.lty=1,    # make box around legend a solid line...
+       box.lwd=1,    # ...of width 1.  
+       inset=c(0.06,0.08), # Inset the legend from the plot boundary
+       bg="white",   # occlude the grid
+       lty    = c(   1    ,   NA      ), # line types
+       col    = c("black" ,"magenta"  ), # colors
+       pch    = c(  NA    ,   15      ), # point characters
+       pt.cex = c(  NA    ,   1.8     ), # point character size
+       legend = c( leg1   ,  leg2     )) # text entries
+  return(invisible(rt))
+}
+
+rt <- myLeg(plt=FALSE)
+rt <- rt$rect # stuff we want
+## displacement of drop-shadow from legend box
+dx <- 0.04*rt$w; dy <- -0.07*rt$w
+## paint the drop-shadow
+rect(xleft=rt$left + dx, xright=rt$left + rt$w + dx, 
+     ytop=rt$top + dy, ybottom=rt$top - rt$h + dy,
+     border=NA, col=rgb(0.1, 0.1, 0.1, 0.2))
+## paint the legend
+myLeg(plt=TRUE)
+```  
+
+# A common legend  
+In this multipanel example, also adapted from Lionel Hertzog (*ibid*.), we put a legend in outer margin 3.  
+
+```{r commonLegend}
+set.seed(20160228)
+par(mfrow=c(2,2), mar=c(3,3,2,0), oma=c(3,3,3,5), pch=16)
+x <- runif(10)
+y <- runif(10)
+cols <- # 10 altogether, but only 5 are unique
+  rep(c("red", "green", "orange", "yellow", "black"), each=2)
+
+for(i in 1:4){
+  plot(x, y, col=cols, ann=FALSE, cex=1.5)
+}
+
+mtext(text="A common x-axis label",
+      side=1, line=0, outer=TRUE)
+mtext(text="A common y-axis label",
+      side=2, line=0, outer=TRUE)
+mtext(text="A common plot title",
+      side=3, line=0, outer=TRUE)
+
+legend(x=1, y=1.7, legend=LETTERS[1:5], pt.cex=1.5,
+       col=unique(cols), pch=16, bty="n", xpd=NA)
+```  
+
+Notice the `xpd` argument in the `legend()` call. The default value of `xpd` is `r par()$xpd`. The help entry for `par()` tells us that `xpd` is a logical value or NA. If FALSE, all plotting is clipped to the plot region, if TRUE, all plotting is clipped to the figure region, and if NA, all plotting is clipped to the device region. See also `clip()`.  
+
+
+# head( ) and tail( )  
+One can use `head()` not only to select the first few elements, but also to omit the last few elements. For example:
+```{r head}
+x <- 1:10
+head(x, 3)
+head(x,-3)
+```  
+Similarly, one can use tail to select the last few elements or omit the first few elements:
+```{r tail}
+x <- 1:10
+tail(x, 3)
+tail(x,-3)
+```  
+This suggests an obvious application, which is to find the midpoints of a vector of numbers.  
+```{r midpoints}
+x <- 1:10
+mdpts <- 0.5*( head(x, -1) + tail(x, -1) )
+mdpts
+## check result
+mdpts <- 0.5*( x[1:(length(x)-1)] + x[2:length(x)] )
+mdpts
+```  
+
+# subset of data frame  
+We use mtcars{datasets} as an example. Here are the first five rows of it:  
+```{r}
+head(mtcars)
+```  
+
+Suppose we want only the four-cylinder data, i.e., we want to make a new data frame containing the rows of mtcars for which cyl=4. One way to do this is a logical vector:  
+```{r}
+tf <- mtcars$cyl == 4
+class(tf) # logical
+head(tf)  # yup, it's a vector
+mtcars_4cyl <- mtcars[tf, ] # pick out rows
+head(mtcars_4cyl) # have a look
+```  
+
+Now suppose we want only the displacement and horsepower columns of the four-cylinder data. We can select the columns by name:  
+```{r}
+mtcars_4cyl_disp_hp <- mtcars_4cyl[ , c("disp", "hp")]
+head(mtcars_4cyl_disp_hp)
+```  
+
+Or we can select them by number:  
+```{r}
+mtcars_4cyl_disp_hp <- mtcars_4cyl[ , c(3,4)]
+head(mtcars_4cyl_disp_hp)
+```  
+In the foregoing we first picked out the rows we wanted (cyl=4), and then the columns, but we can do both operations at the same time:  
+
+```{r}
+mtcars_4cyl_disp_hp <- mtcars[ tf, c(3,4)]
+head(mtcars_4cyl_disp_hp)
+```   
+We can even create the logical array (the one we called tf) at the same time:  
+```{r}
+mtcars_4cyl_disp_hp <- mtcars[mtcars$cyl==4, c("disp", "hp")]
+head(mtcars_4cyl_disp_hp)
+```  
+As usual, R has wrapped this type of stuff up for us in a function, the name of which is (surprise!) `subset()`. After a glance at the first example in the help entry for `subset()`, we try it:
+```{r}
+mtcars_4cyl_disp_hp <- subset(mtcars, cyl==4, c("disp", "hp"))
+head(mtcars_4cyl_disp_hp)
+```  
+Of course, the logical vector used to select rows can be as complicated as we want. For example, suppose we want both the four-cylinder and six-cylinder data:  
+```{r}
+mtcars_46cyl_disp_hp <- subset(mtcars, cyl==4|cyl==6, c("disp", "hp"))
+head(mtcars_46cyl_disp_hp)
+```
+Looking at that last item, we cannot really tell that what we got was the four- and six-cylinder rows, so let's check on that by first including the cylinder column in our subset, and then getting rid of it.    
+```{r}
+test <- subset(mtcars, cyl==4|cyl==6, c("cyl", "disp", "hp"))
+head(test)
+
+mtcars_46cyl_disp_hp <- test[ , c("disp", "hp")]
+head(mtcars_46cyl_disp_hp)
+```
+As we know that the only possible values for cyl are 4, 6 and 8, we can select our rows using the logical vector `cyl != 8` instead of the logical vector `cyl==4|cyl==6`.  
+```{r}
+mtcars_46cyl_disp_hp <- subset(mtcars, cyl!=8, c("disp", "hp"))
+head(mtcars_46cyl_disp_hp)
+```
+To see that `subset()` saves some typing, here, again is the old-fashioned way of doing it, which you can see required typing "mtcars" twice:     
+```{r}
+mtcars_46cyl_disp_hp <- mtcars[mtcars$cyl != 8, c("disp", "hp")]
+head(mtcars_46cyl_disp_hp)
+```
+
+# delete dataframe column  
+Suppose we want to delete some columns from a data frame. We use mtcars{datasets} as an example, removing columns 1, 3, and 5.  
+
+```{r error=FALSE}
+mtc <- mtcars[ , -c(1,3,5)] # remove cols 1,3,5
+head(mtc)
+```
+
+
+# verbatim code chunk  
+If you are writing an instructional document like this, you might want to show a code chunk in the html _with its header_. The following material is adapted from Yihui Xie's [blog](https://yihui.name/en/2017/11/knitr-verbatim-code-chunk/). You will have to compare the Rmd with the html to see the results. Here we use 4-tick _fences_ around the chunk.   
+
+````
+`r ''````{r eval=TRUE}
+x <- 1 + 2
+y <- x + 5
+```
+````   
+The RStudio editor can be confused by the fences, as you can tell from how it colors the text.  In this next chunk we use 4-space indentation instead of 4-tick fences.  
+
+    `r ''````{r eval=TRUE}
+    x <- 1 + 2
+    y <- x + 5
+    ```  
+Fortunately the RStudio editor doesn't seem to be confused by the 4-space indentation.  
+
+# verbatim inline code  
+This will show a verbatim inline R expression `` `r
+x + y` `` in the output. The trick is to enclose the inline code in a double-backtick fence with a carriage return after the `r`.  
+
+# bold & italic labels
+Here is an example with italic in the labels and bold in the title. I made it using R's `expression()` function, which should really be called `mathematicalExpression()` but that is too long a name. Anyway, `expression()` returns a value whose class is expression. The help entry for plotmath {grDevices} states: If the text argument to one of the text-drawing functions (text, mtext, axis, legend) in R is an expression (meaning that its class is expression), the argument is interpreted as a mathematical expression and the output will be formatted according to TeX-like rules. Expressions can also be used for titles, subtitles and x- and y-axis labels (but not for axis labels on persp plots).  
+
+In expressions the asterisk is used to separate symbols without a space, and the tilde is used to separate them with a space. Also certain words have special meanings. For example, `theta` will get you a Greek $\theta$ but `t*h*e*t*a` will get you theta. As another example integral(f(x)*dx,a,b) will get you $\int_a^b f(x)dx$  
+
+```{r}
+xlab <- expression(italic(x) * "  (meters)" )
+ylab <- expression(italic(y) * "  (parsecs)")
+main <- 
+  expression(bold("Figure 1.") * "  A title with some bold in it")
+plot(1, 1, type="n", xlab=xlab, ylab=ylab, main=main)
+```  
+
+Notice that the lines of code can start to get long when we are doing this kind of thing. To keep lines less than 80 characters in length you can put a line feed after any tilde, as in the next version of the previous plot.  
+
+```{r}
+par(mgp=c(2.5, 1, 0)) # axis labels 0.5 line nearer to axis
+xlab <- expression(italic(x) ~ "(meters)" )
+ylab <- expression(italic(y) ~ "(parsecs)")
+main <- 
+  expression(bold("Figure 1.") ~ 
+             "A title with" ~
+             "some bold" ~ 
+             "in it" ~ 
+             "and some" ~ 
+             italic("italic")
+            )
+plot(1, 1, type="n", xlab=xlab, ylab=ylab, main=main)
+```  
+
+# values in plot labels  
+Sometimes you might want to put the value of a variable into a plot text, such as an axis label or title, or a an annotation made with `text()` or `mtext()`.  
+
+## bquote()  
+The `bquote()` function requires an expression as its argument, and substitutes a value into it. You wrap the thing you want evaluated in `.()`. Notice how the plot labels and title are defined in the following chunk. As we saw above, a line feed inside of `bquote()` or `expression()` is ignored if it follows a tilde or asterisk, which makes it easy to put labels and titles on multiple lines.  
+
+```{r}
+par(mar=c(5.1,4.6,6,3))
+x <- 10.3
+xlab <- expression(italic(x) ~ " (meters)" )
+ylab <- expression(italic(y) ~ " (parsecs)")
+main <- 
+  bquote(bold("Figure 1.") ~ " This title is for" ~
+         italic(x) == .(x) ~~~ furlongs ~~~ integral(f(x),a,b)
+        )
+plot(1, 1, type="n", xlab="", ylab=ylab, main="")
+title(xlab=xlab, line=2.2)
+title(main=main, line=2)
+sub <- bquote("(The value "* .(x) *
+                " in the plot title was quoted.)")
+title(sub=sub, line=3.5, col.sub="red", cex.sub=1.5)
+#knit_exit()  
+```  
+## substitute()  
+Another way to put a value into a label is with `substitute()`. The following example, which contains bolded and italic text, as well as a substituted value, is adapted from the example on page 97 of Paul Murell's book titled *R Graphics, 2nd edition*. Notice how `bold()` and `italic()` can be used inside of `paste()`, and that their text arguments are given in quotes. This method does not seem to me to be as powerful as the `bquote()` method because it does not seem to play well with `expression()` which is needed for math symbols, but perhaps I haven't tried hard enough. Anyway, notice that spaces seem to be needed in the text strings to obtain the correct word spacing.       
+```{r}
+x <- 10.3
+xlab <- expression(italic(x) ~ " (meters)" )
+ylab <- expression(italic(y) ~ " (parsecs)")
+main <- substitute(
+          paste(bold("Figure 1."),
+                "This title is for ",
+                italic("x"), " = ", x, 
+                " fathoms"), list(x=x)
+        )
+plot(1, 1, type="n", xlab=xlab, ylab=ylab, main=main)
+```
+
+
+# math in labels  
+This example was contributed to [StackOverflow](https://stackoverflow.com/questions/15736370/special-characters-and-superscripts-on-plot-axis-titles) by Gavin Simpson. I added more tildes to obtain larger spaces between words.  Notice the use of R's `expression()` function, which should really be called `mathematicalExpression()` but that is too long a name. Anyway, `expression()` returns a value whose class is expression. The help entry for plotmath {grDevices} states: If the text argument to one of the text-drawing functions (text, mtext, axis, legend) in R is an expression (meaning that its class is expression), the argument is interpreted as a mathematical expression and the output will be formatted according to TeX-like rules. Expressions can also be used for titles, subtitles and x- and y-axis labels (but not for axis labels on persp plots).  
+
+In expressions the asterisk is used to separate symbols without a space, and the tilde is used to separate them with a space. Also certain words have special meanings. For example, `theta` will get you a Greek $\theta$ but `t*h*e*t*a` will get you theta. As another example integral(f(x)*dx,a,b) will get you $\int_a^b f(x)dx$  
+
+```{r plotmatha}
+df <- data.frame(y = rnorm(100), x = rnorm(100))
+par(mar=c(5,5.5,3,2)) # stops clipping of superscript in xlab
+xlab <- expression( Concentration~~Cl~~(mu~~moles~~ 
+                          g^{-1}~~dry~~wt)             )
+ylab <- expression(Average~~Conc~of~~S- ~~on~~plates~~ 
+                      (mu~~Moles~~cm^{-2}~dry~wt)      )
+plot(y ~ x, data = df, ann=FALSE)
+title(xlab=xlab, cex.lab=0.8)
+title(ylab=ylab, cex.lab=0.8)
+main <- expression("Some math nonsense about " *
+                   t*h*e*t*a*":" ~~~~ # many spaces
+                   theta(x) ==         # == gets you =
+                   phi(x)*integral(f(x)*dx,a,b) 
+                  )
+title(main=main)
+```
+
+Alternatively, you can include strings for longer sections of text, as in this plot.  
+
+```{r plotmathb}
+par(mar=c(5,5.5,3,2)) # prevents clipping of superscript in xlab
+plot(y ~ x, data = df,
+     ylab = expression("Average Conc of S- on plates" ~
+                         (mu ~ moles ~ cm^{-2} ~ "dry wt")),
+     xlab = expression("Concentration Cl" ~~ (mu ~ moles ~~ g^{-1} ~ "dry wt")))
+```
+
+# initialization  
+If you initialize a variable x as a scalar, R will lengthen x as needed, but there is an overhead for the lengthening procedure. Accordingly, if you know how large an array will be needed, it is best to initialize it at full length. In the following example a sine function is evaluated $n=10^6$ times and the results are stored in a vector `x`. In the first part, the length of `x` is incremented as needed. In the second part, `x` is created ahead of time with size $n$.        
+
+```{r storage, comment=""}
+n <- 1e6
+cpu1 <- 
+  system.time({ x <- numeric(0)
+                for (i in 1:n) x[i] <- sin(i*pi/180)
+              })[2]
+cat("NB-----> x = numeric(0) resulted in ", 
+    signif(1000*cpu1,4), 
+    " microseconds of CPU time.\n"
+    )
+
+cpu2 <- 
+  system.time({ x <- numeric(n)
+                for (i in 1:n) x[i] <- sin(i*pi/180)
+              })[2] 
+
+cat("NB-----> x = numeric(n) resulted in  ", 
+    signif(1000*cpu2,4), 
+    " microseconds of CPU time.\n\n"
+    )
+```   
+
+# tables with kable( )  
+## Basic kable( )
+To make tables in our final output (*presentation document* is the jargon) we can use the function `kable()`, which is very convenient for data frames and seems to work well when knitting to html, LaTeX or pdf. In this example we use it to make a table of the mtcars data.  
+```{r tableWithKable, results="asis"}
+caption <- "**Table 1(a).** The *mtcars* data from the datsets package, using kable()."
+knitr::kable(mtcars, format="html", align="c", caption=caption)
+```
+
+## prettier tables    
+The table above has columns that appear to be crowded together, but in the next chunk we easily improve the look of the table with the function kable_styling() from Hao Zhu's [kableExtra package](https://haozhu233.github.io/kableExtra/awesome_table_in_html.html). To simplify the code we use *pipes* a venerable unix concept imported to R in the magrittr package. Using the pipe operator `%>%` we pipe the output of one function to the input to a second function. As a generic example, instead of coding `f3(f2(f1(x)))` we code `f1(x) %>% f2() %>% f3()`. All three functions are allowed to have additional arguments, but the x-argument appears only in the first function. In the following chunk we are concerned with only two functions so there is only one pipe.    
+
+```{r kableExtra_ex11, results="asis"}
+library("kableExtra")
+library("magrittr")
+caption <- "Table 1(b). Similar to Table 1(a) but with kable_styling()."
+kable(mtcars, format="html", align="c", caption=caption) %>%
+  kable_styling(full_width=FALSE, position="left")
+```  
+The kableExtra package has many more very cool features. For example, one can change column width and color, and tilt column headings, as in the following chunk. Notice the use of the functions row_spec() and column_spec() to change the specification of particular rows and columns, respectively. Here as in the last chunk, the code is simplified by using pipes.   
+
+```{r kableExtra_ex2, results="asis"}
+caption <- "Table 1(c). Similar to Table 1(b) but with more styling."
+kable(mtcars, format="html", align="c", caption=caption) %>%
+  row_spec(0, angle = -45) %>%
+  column_spec(1, bold = T, border_right = T) %>%
+  column_spec(5, width = "5em", background = "yellow") %>%
+  kable_styling(full_width=FALSE, position="left") 
+detach(package:kableExtra)
+```
+
+
+# tables with xtable( )   
+The function `xtable()` in the xtable package, has methods not only for data frames and matrices, but also for fits with `lm()`. In order to use xtable you should set results="asis" in the chunk header, and you must tell xtable whether you are knitting to html or to LaTeX (pdf). The following example is adapted from Gandrud (2015)[^1]. The data frame named *swiss* is in the datasets package loaded by R at startup. It is taken from the classic statistics texbook by Mosteller and Tukey[^2]. It consists of fertility and socio-economic indicators for the French-speaking provinces of Switzerland around 1888, a time during which relatively few children received more than a primary education. The *Examination* variable is the percent of army draftees receiving the highest grade on the army entrance examination, and the *Education* variable is the percent education beyond primary school for draftees. Presumably the greater the fraction of draftees with education beyond primary school, the higher the percentage of high-scoring draftees.  
+
+[^1]: Gandrud, Christopher, (2015) *Reproducible Research with R and RStudio, 2nd edition*, CRC Press.  
+[^2]: Mosteller, F. and Tukey, J. W. (1977) *Data Analysis and Regression: A Second Course in Statistics*. Addison-Wesley, Reading Mass.
+
+```{r tableWithXtable, results="asis"}
+library("xtable")
+## fit with lm()
+M1 <- lm(Examination ~ Education, data=swiss) # class "lm"
+## create an xtable object
+caption <- "**Table 2.** Linear regression of the dataset *swiss*."
+M1table <- xtable(M1, caption=caption,
+                  label="Basic xtable summary",
+                  align=rep("c",5),
+                  digits=1)
+## Create html summary
+print.xtable(M1table, type="html", caption.placement="top")
+detach(package:xtable)
+```
+
+
+# knitr options  
+Evidently, when knitting to html the chunk options `fig.cap`, `fig.align` and `fig.asp` all have an effect, but the following don't options seem to: `fig.subcap`, `fig.width`, `fig.height`, `size`. Yihui Xie clarifies how to use the [include option](https://yihui.name/en/2017/11/knitr-include-false/).  
+
+```{r knitrOptions, fig.cap="**Figure**: Test of the knitr chunk option fig.cap", fig.subcap="Test of the knitr chunk option fig.subcap", fig.align="center", size="HUGE", collapse=FALSE}
+par(mar=c(6,4.1,2,2))
+plot(mtcars$wt, mtcars$mpg, xlab="wt (tonnes)", ylab="mpg")
+# cat("This is a test of the knitr chunk option size.\n") # unaffected by chunk option size.  
+```   
+
+# apply( )  
+
+Pete at [R-Bloggers](https://www.r-bloggers.com/using-apply-sapply-lapply-in-r/) has a nice note on the uses of apply(), sapply(), lapply(). 
+
+# sweep( )  
+The existence of R's `sweep()` function illustrates R's ancestry of functional programming. R is a freeware clone of S, which was designed for interactive work, so that statisticians would not have to type a lot of code every time they wanted to do something routine. As an example, suppose you have a matrix of numbers and you want to subtract the column means from the columns:  
+```{r sweep1}
+M  <- matrix(rnorm(50), ncol=5) # matrix of random numbers
+mM <- apply(M, MARGIN=2, FUN=mean) # vector of column means
+M  <- sweep(M, MARGIN=2, STATS=mM, FUN="-") # remove col means
+
+## Check the column means of Mzm are now zero
+mM <- numeric(ncol(M)) # empty vector 
+for(ic in 1:ncol(M)){
+  mM[ic] <- mean(M[ ,ic])
+}
+all.equal(mM, rep(0, ncol(M))) # TRUE
+```  
+In this next example, we scale the columns of `M` to have unit standard deviation.    
+```{r sweep2}
+SD  <- apply(M, MARGIN=2, FUN=sd)  # vector of column SD's
+M   <- sweep(M, MARGIN=2, STATS=SD, FUN="/") # divide each col by its SD
+
+## Check that column SD's are now unity
+sM <- numeric(ncol(M))
+for(ic in 1:ncol(M)){
+  sM[ic] <- sd(M[ ,ic])
+}
+all.equal(sM, rep(1, ncol(M))) # TRUE
+```  
+
+
+# with( )  
+The "snowflakes" code in the following chunk is from Yihui Xie's blog. It illustrates how `with()` works. The first argument of `with()` is a data structure such as a data frame or list, and the second argument is a code block. In this example the code block is a single plot call, so the usual curly brackets aren't needed.  
+
+```{r snowflakes}
+par(mar = rep(0, 4), bg = 'black', ann = FALSE)
+n = 100
+with(
+  list(x = runif(n), y = runif(n), size = runif(n, 1, 7)),
+  plot(x, y, pch = 42, cex = size, col = 'white')
+)
+```
+
+
+# grid behind   
+Plots made using ggplot {ggplot2} have an attractive grey background with white grid lines, by default. In this course we have favored the base graphics plotting functions because they are similar to those of other computer languages. It isn't too difficult to make a grey background, and even to automate it to some extent. The strategy used in this example is to create a little function `mygrid(atx, aty)` whose arguments are the locations of the xticks and yticks. The function paints a grey rectangle whose border is the tick limits. Then it draws white lines at the tick locations and thinner white lines halfway between the tick locations. The panel.first argument of `plot()` is used to call `mygrid()` from inside the `plot()` call. If the white grid lines are difficult to see in the following plot, increase the lwd arguments in `mygrid()`.  
+
+```{r background}
+mygrid <- function(atx, aty){
+  # Makes a white grid on a gray background
+  # Grid lines are at axis tick values
+  # atx is a vector of x-tick locations
+  # aty is a vector of y-tick locations
+  
+  ## paint a gray background rectangle
+  xv <- c(range(atx)      , rev(range(atx)) )
+  yv <- c(rep(min(aty), 2), rep(max(aty), 2))
+  polygon(xv, yv, border=NA, col=grey(0.9,alpha=NULL))
+  
+  ## cell counts for grid
+  nx <- length(atx) - 1
+  ny <- length(aty) - 1
+  
+  ## draw gridlines
+  grid(nx=   nx, ny=  ny, col="white", lty=1, lwd=0.70)
+  grid(nx= 2*nx, ny=2*ny, col="white", lty=1, lwd=0.35)
+}
+
+## Data for example
+x <- seq(0,10,0.1)
+y <- x^2*exp(-2*x/5)
+
+## Axis ticks
+atx <- 0:10 # xticks
+aty <- 0:5  # yticks
+
+## PLot
+par(mar=c(4,4,2,2)) # less white space
+plot(x, y, type="l", 
+     xlim=range(atx), ylim=range(aty), 
+     bty="n", axes=F, ann=F,
+     xaxs="i",yaxs="i",
+     panel.first=mygrid(atx,aty)
+    )
+
+## Axes
+axis(side=1, line=0, at=atx, lwd=0, lwd.ticks=1, col="darkgrey")
+axis(side=2, line=0, at=aty, lwd=0, lwd.ticks=1, col="darkgrey", las=2)
+
+## Axis labels and title
+mtext("x", side=1, line=2.5)
+mtext("y", side=2, line=2.5, las=2)
+main <- expression(y == x^2~e^{-2*x/5})
+mtext(main, side=3, line=0.5, cex=1.2)
+```
+
+# custom plots  
+Axis lines are redundant when there is a grid, although they do no harm. In the following example we eliminate both the box around the plot and the axis lines, but keep the ticks and tick labels. The x-tick labels and x-axis label can be in radians or degrees.    
+```{r noAxisLines}
+useRadians <- TRUE # <-------------------- NB
+par(family="serif", mar=c(4,4,1,2))
+x <- seq(-360, 360, len=721)
+ys <- sin(x/180*pi)
+yc <- cos(x/180*pi)
+plot(x, ys, axes=F, ann=F, xaxs="i", yaxs="i",
+     type="n", ylim=c(-2, 2))
+
+## tick locations
+atx <- seq(-360, 360, 90  )
+aty <- seq(  -2,   2,  0.5)
+
+## grid 
+abline(v=atx, col="grey", lty=1, lwd=0.5)
+abline(h=aty, col="grey", lty=1, lwd=0.5)
+abline(v=0  , col="grey", lty=1, lwd=1.0)
+abline(h=0  , col="grey", lty=1, lwd=1.0)
+
+## graphs
+lines(x, ys, col="red"  , lty=1, lwd=2.2)
+lines(x, yc, col="green", lty=1, lwd=2.2)
+
+## make x-tick labels, x-label
+if(useRadians){ # use radians
+  xtl   <- c(expression(-2*pi     ),
+             expression(-3*pi*"/2"),
+             expression(-  pi     ),
+             expression(-  pi*"/2"),
+             expression( 0        ),
+             expression(   pi*"/2"),
+             expression(   pi     ),
+             expression( 3*pi*"/2"),
+             expression( 2*pi     ))
+  xlab <- expression(theta~~"(radians)") 
+} else { # use degrees
+  xtl  <- seq(-360, 360, by=90)
+  xlab <- expression(theta~~"(degrees)")
+}
+
+## axes
+axis(1, line=0, las=1, lwd=0, 
+     col="grey", col.ticks="grey",
+     lwd.ticks=1, at=atx, labels=xtl)
+axis(2, line=0, las=2, lwd=0, 
+     col="grey", col.ticks="grey",
+     lwd.ticks=1, at=aty, labels=TRUE)
+
+## axis labels
+mtext(   xlab      , side=1, line=2.5, cex=1.1)
+mtext("sin, cos"   , side=2, line=3.0, cex=1.1)
+
+legend("topright", bty="o", bg="white", box.lwd=0,
+       inset=c(0.10, -0.02),
+       seg.len=1.5,
+       col=c("red","green"),
+       lwd=c(2.2, 2.2),
+       legend=c(expression("sin"~theta), 
+                expression("cos"~theta))
+      )
+```
+
+
+# axis style
+The trick is to use the graphical parameters xaxs (think x-axis *style*) and yaxs.  The help entries for those two parameters read as follows:  
+
+**xaxs**: 
+The style of axis interval calculation to be used for the x-axis. Possible values are "r", "i", "e", "s", "d". The styles are generally controlled by the range of data or xlim, if given. Style "r" (regular) first extends the data range by 4 percent at each end and then finds an axis with pretty labels that fits within the extended range. Style "i" (internal) just finds an axis with pretty labels that fits within the original data range. Style "s" (standard) finds an axis with pretty labels within which the original data range fits. Style "e" (extended) is like style "s", except that it is also ensures that there is room for plotting symbols within the bounding box. Style "d" (direct) specifies that the current axis should be used on subsequent plots. (Only "r" and "i" styles are currently implemented)
+
+**yaxs**:  
+The style of axis interval calculation to be used for the y-axis. See xaxs above.  
+
+**An example**  
+Compare the following two plots.   
+```{r xaxsANDyaxs, fig.cap=fig.cap}
+op <- par(mfrow=c(1,2))
+x <- 0:10
+set.seed(123)
+y <- runif(11)
+plot(x, y, ylim=c(0,1), type="o", xaxp=c(0,10,10),
+     xaxs="r", yaxs="r", main="xaxs=yaxs='r'")
+plot(x, y, ylim=c(0,1), type="o", xaxp=c(0,10,10),
+     xaxs="i", yaxs="i", main="xaxs=yaxs='i'")
+fig.cap= "**Figure.** Left panel was made with the regular axis style (xaxs='r', yaxs='r'), which is the default. Right panel was made with the internal axis style (xaxs='i', yaxs='i')."  
+par(op)
+```   
+
+# two y-axes (Ex 1)  
+
+(Note that in the following set of examples the zero of the right y-axis is at a different height than that of the left y-axis. This does not make the figure less accurate, but it is somewhat unsatisfying.)
+
+Suppose you have two types of y-data with greatly different scales, and you want to show them on the same plot. One solution is is to put a second y-axis on the right side of the plot. The method is: (a) create a larger margin on the right; (b) call `axis(side=3)` to draw the right y-axis; and (c) call `mtext()` to print the label for the right y-axis. Here is an example.  
+
+```{r plotyy_1}
+x   <- seq(0,20,0.01)
+y1 <-  200*exp(-0.1*x)*sin(x)
+y2 <-  0.8*exp(-0.5*x)*sin(10*x)
+op <- par(mar=c(5,4,1,5)) # more room on right
+
+# left y-axis plot
+plot(x, y1, type="l", col="black", bty="n",
+     lwd=1.5, xlab="x", ylab=expression(y[1]),
+     ylim=c(-180, 180))
+grid(col="black", lty=3)
+
+# right y-axis plot
+par(new=TRUE)
+col2 <- "magenta" # for right y-axis
+plot(x, y2, type="l", col=col2, bty="n",
+     lwd=1.5, ann=FALSE, axes=FALSE)
+#grid(col=col2, lwd=1.5) # extra grid confuses
+axis(side=4, at=seq(-0.6, 0.6, len=5), 
+     col=col2, col.axis=col2)
+mtext(side=4, line=3, expression(y[2]), col=col2)
+```  
+  
+# two y-axes (Ex 2)
+This example is like the last one, except that now both y-axes are black. The line corresponding to the right axis is still colored. A legend is added to distinguish y~1~ from y~2~.    
+```{r plotyy_2}
+x   <- seq(0,20,0.01)
+y1 <-  200*exp(-0.1*x)*sin(x)
+y2 <-  0.8*exp(-0.5*x)*sin(10*x)
+op <- par(mar=c(5,4,1,5)) # more room on right
+
+# left y-axis plot
+plot(x, y1, type="l", col="black", bty="n",
+     lwd=1.5, xlab="x", ylab=expression(y[1]))
+grid(col="black", lty=3)
+
+# right y-axis plot
+par(new=TRUE)
+col2 <- "black" # for right y-axis
+plot(x, y2, type="l", col="magenta", bty="n",
+     lwd=1.5, ann=FALSE, axes=FALSE)
+axis(side=4, at=seq(-0.6, 0.6, len=5), 
+     col=col2, col.axis=col2)
+mtext(side=4, line=3, expression(y[2]), col=col2)
+
+# legend for both plots
+legend("topright", inset=c(0.05,0.05),
+       legend=c("y1 (left axis)", "y2 (right axis)"),
+       lwd=c(2,2),
+       col=c("black","magenta"))
+```  
+  
+  
+# two y-axes (Ex 3)  
+This example is like the last, except that I used las=2 on both the left and right y-axes. Setting las=2 in `axis()` causes the tick labels to be printed purpendicular to the axis, and setting las=2 in `mtext()` causes the text to be printed that way. Of course, if the y-labels were long one would not want to rotate them.  
+
+```{r plotyy_3}
+x   <- seq(0,20,0.01)
+y1 <-  200*exp(-0.1*x)*sin(x)
+y2 <-  0.8*exp(-0.5*x)*sin(10*x)
+op <- par(mar=c(5,4,1,5)) # more room on right
+
+# left y-axis plot
+plot(x, y1, type="l", col="black", bty="n",
+     lwd=1.5, axes=FALSE, ann=FALSE)
+grid(col="black", lty=3)
+axis(side=1)
+mtext("x", side=1, line=2.5)
+axis(side=2, las=2)
+mtext(expression(y[1]), las=2, side=2, line=2.5)
+
+# right y-axis plot
+par(new=TRUE)
+col2 <- "black"
+plot(x, y2, type="l", col="magenta", bty="n",
+     lwd=1.5, ann=FALSE, axes=FALSE)
+axis(side=4, at=seq(-0.6, 0.6, len=7), 
+     las=2, col=col2, col.axis=col2)
+mtext(side=4, line=3, las=2, expression(y[2]), col=col2)
+
+# legend for both plots
+legend("topright", inset=c(0.05,0.05),
+       legend=c("y1 (left axis)", "y2 (right axis)"),
+       lwd=c(2,2),
+       col=c("black","magenta"))
+```  
+
+# lists  
+You have repeatedly seen the _selection operator_ `$` used to pick out a column of a data frame or an element of a list. Lists are marvellously flexible data structures, and many built-in functions return them as values. Basically, a **list** is an ordered collection of objects with no restriction on the class of the objects. Here is an example. 
+
+```{r exlista, collapse=TRUE}
+numvec <- c(1,3,-7)
+charvec <- c("alpha", "mother", "January", "June")
+mymat <- matrix(data=1:12, nrow=4)
+myfun <- function(who="World"){
+  cat( paste0("Hello ", who, "!\n") )
+}
+mylist1 <- list(numvec, charvec, mymat, myfun)
+mylist1[[1]][3]
+mylist1[[2]][1]
+mylist1[[4]]
+mylist1[[4]]("John")
+mylist1[[4]]()
+```  
+You will have noticed in the above that in order to get the 2nd element of mylist we had to type mylist[[2]] instead of mylist[2]. That is because mylist[2] returns a list. Watch this:  
+
+```{r exlistb}
+class( mylist1[ 1 ] )
+class( mylist1[[1]] )
+```  
+
+To make accessing the elements of a list easier, we give the elements of the list names. Then we can use the selection operator `$` instead of typing all those square brackets. We can give the elements names when the list is created.  
+
+```{r, exlistsc}  
+mylist2 <- list(nums=numvec, chars=charvec, 
+                mat=mymat, mf=myfun)
+
+mylist2$nums[2]       # best
+mylist2[["nums"]][2]  # 2nd best
+mylist2[[1]][2]       # obscure
+
+mylist2$chars[4]
+mylist2[["chars"]][4]
+mylist2[[2]][4]
+
+mylist2$mat[,3,drop=FALSE]
+mylist2[["mat"]][,3,drop=FALSE]
+mylist2[[3]][,3,drop=FALSE]
+
+mylist2$mf
+mylist2[["mf"]]
+mylist2[[4]]
+
+mylist2$mf("Jill")
+mylist2[["mf"]]("Jill")
+mylist2[[4]]("Jill")
+```  
+We can also specify the names after the list has been created.   
+
+```{r exlistsd}
+mylist3 <- mylist1 # recall mylist1 has no names
+names(mylist3) # NULL
+names(mylist3) <- c("nums","chars","mat","ff")
+mylist3$ff("Jennifer")
+mylist3$chars[2]
+```  
+
+Don't forget that any or all elements of a list can also be lists.  
+
+```{r exlistse}
+list1 <- list(a=23, b="giraffe")
+letters[1:5]
+list2 <- list(dog=letters[1:5], cat=list1)
+
+list2$dog[3]
+list2[["dog"]][3]
+list2[[1]][3]
+
+list2$cat$b
+list2[["cat"]]$b
+list2[[2]]$b
+list2[[2]][[2]]
+cat("...and so forth.\n")
+```  
+You see that it is usually most convenient to name all the elements of a list and use the selection operator to access them by name. However, if you wanted to access the elements of a list in a for-loop you might, just might, find it more convenient to use the number-in-double-square-brackets method. The vector in a for-loop isn't required to be a series of integers; it can be a vector of type character, for example. See the vector entry for examples of this.
+
+# vectors  
+A vector is an ordered set of objects of the **same type**. The objects in a vector are often referred to as the _elements_ of the vector. We can make a vector of numbers and access the individual elements using square brackets:  
+```{r}
+vec1 <- c(1.3, -2.8, 11.2)  
+vec1[3]
+```  
+or a vector of strings,  
+```{r}
+vec2 <- c("Res", "ipsa", "loquitur.")
+vec2[1]
+```
+or a vector of logical values,
+```{r}
+veclog <- c(TRUE, FALSE, TRUE, TRUE)
+veclog[2]
+```
+or even a vector of functions. Unless we name the functions we have to use _double_ square brackets to access them:  
+```{r}
+vec3 <- c(function(x) x^2, 
+          function(x,n) x^n, 
+          function(x,y) sin(x)*cos(y)
+          )
+vec3[[2]]
+vec3[[2]](x=5, n=2)
+```  
+
+In the following chunk, we give our functions names, so we can then access them by name:  
+```{r}
+vec3 <- c(f=function(x) x^2, 
+          g=function(x,n) x^n, 
+          h=function(x,y) sin(x)*cos(y)
+          )
+vec3[["g"]]
+vec3[["g"]](x=5, n=2)
+```  
+
+
+If you want to aggregate functions, it is probably better to put them in a named list because you can then access them using the selection operator `$`, which saves a bit of typing. Also, a list has the advantage that its elements do not all have to be of the same type. To refresh your memory, here is a named list of functions:  
+
+```{r}
+funlist <- list(f1 = function(x) x^2, 
+                f2 = function(x,n) x^n, 
+                f3 = function(x,y) sin(x)*cos(y)
+                )
+funlist$f2
+funlist$f2(5, 2)
+
+## We can still use numbers to access them.
+funlist[[2]]
+funlist[[2]](5, 2)
+```
+As you just saw, we can give the elements of a vector names if we want, and then access elements by their names. It isn't necessary to name every element.  
+```{r}
+vec1 <- c(1.3, xx = -2.8, zz = 11.2)  
+vec1
+vec1[3]
+vec1["zz"]
+```
+
+# Data frames  
+A data frame is a collection of vectors in which every vector has the same number of elements, although the vectors may be of different types. If you are used to dealing with matrices, visualize a data frame as a matrix in which the columns are allowed to be different types. For example, one vector can be numeric and the other vector can be strings,  
+```{r}
+df <- data.frame(name       = c("Mary", "Deborah", "Kevin"),
+                 heightInCm = c(167.6 , 162.6    , 177.8  ),
+                 eyeColor   = c("blue", "green"  , "brown"),
+                 stringsAsFactors = FALSE                  )
+head(df)
+```
+If you want to aggregate vectors of different length, use a list (discussed above) instead of a data frame.  
+
+Extracting information from data frames is like extracting information from lists. We can subscript or we can use the selection operator `$`.    
+```{r}
+df[1, 2]      # element in row 1, col 2
+df[ , 2]      # all the elements in col 2
+df[[2]]       # same
+df$heightInCm # same
+```
+We do not have to remember line numbers; we can use logical vectors:    
+```{r}
+df$name=="Kevin"
+df[df$name=="Kevin", "eyeColor"]
+```
+
+
+# colors in plots   
+There are several ways to specify colors in R. If you type `colors()` or `colours()` in the console it will show you the 500+ colors that you can specify by name. Some of the names mean the same thing, for example "grey" and "gray". If you want to specify a color using the red-green-blue system, or any of the other systems, the help entry for colors() will tell you what function to use. If you create a custom color from a supplied color using a statement like this  
+```
+myskyblue <- adjustcolor("skyblue", alpha.f=0.25)
+```  
+then remember not to put its name in quotes when you refer to it in a plot call:  
+```
+plot(x, y, col=  "skyblue"  ) # works
+plot(x, y, col=  myskyblue  ) # works
+plot(x, y, col= "myskyblue" ) # throws an error
+```  
+
+As the color gray is used a lot for shading, there is a convenient function gray(), which can also be called as grey(), and has its own help entry. The call has the form `gray(level, alpha = NULL)`. The level argument should be between 0 and 1, corresponding to full black and full white, respectively. For example, if you want a very light gray background on a plot, as in the example above, you might use `gray(level=0.9)`. The alpha argument is opacity, a measure of how well you can see through it. If you want to see what is beneath a gray fill, try alpha=0.25.  
+
+# factors    
+Think of factors as categorical data stored as integers because vectors of integers require less memory than vectors of character strings. 
+
+To see this, imagine 5,000 fruit observations: c("apple", "apple", "orange", "banana", "apple", ...). If we agree that apple goes with 1, orange goes with 2 and banana goes with 3, our data can be stored as c(1, 1, 2, 3, 1, ...). Every element of the vector then has the same size and takes just one word of memory. 
+
+Storing categorical data as integers also permits ordering. For example, if we have a categorical variable x with possible values (the technical term is levels) "poor", "fair", "good", "very good" and "excellent" we might want to associate "poor" with 1, "fair" with 2 and so forth. X is then said to be an ordered factor. If you ask for a histogram of such data, R will plot the bars on the histogram in the desired order . If x wasn't an ordered factor, R would plot the histogram bars in alphabetical order: "excellent", "fair", "good", "poor", "very good". You can order a factor by using the `ordered()` function.   
+
+Here is a sort of example adapted from one at [DataCamp](https://campus.datacamp.com/courses/introduction-to-r-for-finance/factors-4?ex=8). Suppose you are collecting sedimentary rocks that can be categorized (in order of increasing degree of metamorphism) as shale, slate, schist, or gneiss. Imagine now that you have a data frame called `myRocks` containing all your sample data. One column of `myRocks`, called `degree`, say, contains degree in character form, and the other columns are density, conductivity and so forth. In the console you might see this:
+```
+class(myRocks$degree)
+[1] "character"
+
+myRocks$degree
+[1] "gneiss", "schist", "schist", "shale", "gneiss", "slate", ...
+```
+If you make box and whisker plots of density for the four rock types like this 
+```
+boxplot(density ~ degree, data=myRocks)
+```
+you will find that the the box and whisker plots will appear from left to right in alphabetical order: gneiss, schist, shale, and slate. To make them appear in the order of increasing metamorphic degree you first make `myRocks$degree` into an ordered factor, like this:
+```
+myRocks$degree <- 
+    factor( myRocks$degree, ordered=TRUE,
+    levels=c("shale", "slate", "schist", "gneiss") )
+    
+boxplot(density ~ degree, data=myRocks)
+```  
+If `myRocks$degree` is already a factor you can order it using the function `ordered()` like this
+```
+myRocks$degree <- 
+      ordered(myRocks$degree, 
+      levels=c("shale", "slate", "schist", "gneiss") )
+```  
+
+# boxplot()    
+This example uses the airquality data set, which is automatically loaded in R at startup.  
+```{r fig3.3}
+# head(airquality)
+# class(airquality$Month) # integer
+boxplot(Temp ~ Month, data=airquality, 
+        xlab="Month", ylab="", col="skyblue")
+ylab <- expression("Temperature (" * degree * "F)" )
+title(ylab=ylab)
+```  
+
+Let's put the abbreviated names of the months on the x-axis using what we learned above about factors. First we use the built-in constant `months.abb` to turn month numbers into month abbreviations. Then we make Month an ordered factor. Then we call boxplot().   
+
+```{r names}
+aq <- airquality
+# month.abb 
+aq$Month <- month.abb[aq$Month] # convert to character
+levels <- c("May","Jun","Jul","Aug","Sep")
+aq$Month <- factor(aq$Month, ordered=TRUE, levels=levels)
+boxplot(Temp ~ Month, data=aq, col="orange")
+title( ylab=expression( "Temperature (" * degree * "F)" ) )
+```  
+
+# for-loops    
+Here is a simple for-loop. I use "i" as an index. 
+```{r forex1}
+for(i in 1:5) {
+  cat("This time the index is",i,"\n")
+  Sys.sleep(0.1)
+}
+```  
+There is nothing special about the name "*i*" for an index. I just use it because it's short, and because in mathematics, *i* and *j* are often used as names for integer quantities. We could call it a giraffe.  
+```{r forex2}
+for(giraffe in 1:5) {
+  cat("This time the index is", giraffe, "\n") 
+  Sys.sleep(0.1)
+}
+```  
+
+Here is a for-loop in which the loop vector is of type character.  
+```{r forex3b}
+words <- c("This","is","a","silly","example.")
+
+for(word in words){
+  cat(word,"\n")
+  Sys.sleep(0.1)
+}
+``` 
+
+Here is another version of the previous loop. This version seems less natural to me.  
+```{r forex3a}
+words <- c("This","is","a","silly","example.")
+
+for(i in 1:length(words)){
+  cat(words[i],"\n")
+  Sys.sleep(0.1)
+}
+```  
+
+Here is a for loop that squares the numbers in a vector x. It is unnecessary because the base function '^' vectorizes, but we pretend we don't know that.  
+```{r forex4a}
+x <- 1:5
+y <- numeric(length(x)) # create storage. 
+for(j in 1:length(x)){
+  y[j] <- x[j]^2
+}
+y
+```  
+We check the answer by computing $x^2$ in the usual way.  
+```{r forex4b}
+x^2
+```  
+By the way, the *infix operators* '+', '-', '*', '/', and '^' are just functions themselves. If you want to refer to them by name, you have to put them in back quotes.   
+```{r forex4c}
+x
+x^2
+`^`(x,2)
+`*`(x,x)
+`+`(x,3.3)
+`-`(x,0.9)
+`/`(x,2)
+
+```  
+
+# functions    
+If you find yourself repeating the same statements you should write a function. They save a lot of typing, and you only have to debug the function once.  
+Here is a simple function. You give it two x-y pairs, and it calculates the slope and intercept of the line through those two points.
+```{r funex1a}
+xy2si <- function(xx,yy){
+  slope <- (yy[2] - yy[1])/(xx[2] - xx[1])
+  intercept <- yy[1] - slope*xx[1]
+  return( c(slope,intercept) )
+}
+```  
+We test our function, plotting the results. If the line goes through the points, our function isn't obviously defective.  
+```{r funex1b}
+exes <- c(1,5)
+wyes <- c(3,7)
+ab <- xy2si(exes,wyes)
+b <- ab[1] # slope
+a <- ab[2] # intercept
+plot(x=exes, y=wyes, type="p", cex=1.5, ann=FALSE,
+     xlim=c(0,6), ylim=c(0,8)
+     )
+title(xlab="x", ylab="y",cex.lab=1.5, font.lab=3) # big italic
+title(main="Test of our function xy2si()", family="serif")
+abline(a,b,col="red")
+```  
+
+# frequency histograms    
+Here is a  histogram of 10,000 random numbers from a normal distribution with a mean of 20 and a standard deviation of 5. The bar height is the number of samples in the bin.   
+```{r hist1, fig.cap=fig.cap}
+fig.cap <- "**Figure 1**. A histogram made from a sample consisting of 10,000 random numbers from the normal distribution with mean 20 and standard deviation 5. Bar height indicates the number of samples in the bin."
+x <- rnorm(n=10000, mean=20, sd=5)
+x <- x[x>0 & x<40]
+hist(x, breaks=seq(from=0,to=40,by=2), 
+     col="grey", main="Frequency histogram")
+```  
+
+# Pr. density histograms     
+The bar height is the *fraction* of samples in that bin divided by the width of the bin.  
+```{r hist2, fig.cap=fig.cap}
+fig.cap <- "**Figure 2**. A density histogram made from the same random numbers used in Figure 1. Bar height is the *fraction* of samples in the bin divided by the width of the bin. Thus the total area under the histogram is 1."
+hist(x, freq=FALSE, breaks=seq(from=0,to=40,by=2), 
+     col="grey", main="Density histogram")
+```  
+
+# simple diagrams
+
+## A triangle 
+The following chunk makes a diagram consisting of a right triangle with labeled sides and vertex angles. To improve the appearance in the html I set the xpd and mar plot parameters (see the help entry for par()), as well as the fig.asp chunk option.   
+
+```{r triangle1, fig.align="center", fig.asp=0.5, fig.cap="**Figure 1.** This triangle was made by the code chunk named *triangle1*."}
+par(xpd=NA, mar=c(1,0,0,0))
+plot(x=0, y=0, type="n",       # empty plot
+     xlim=c(1,9),              # limits of x-axis
+     ylim=c(1.5,6),            # limits of y-axis
+     bty="n",                  # no box around plot
+     xaxt="n", yaxt="n",       # no axes (axes=FALSE also works)
+     xlab="", ylab="")         # no axis labels (ann=FALSE also works) 
+
+exes <- c(2,8,8) # x-coords of triangle vertices
+wyes <- c(2,2,6) # y-coords of triangle vertices
+polygon(x=exes, y=wyes, border="black") # draw triangle
+par(cex=1.3)     # expand character size by 30%
+text(x=5.4, y=1.6, labels="base")
+text(x=8.3, y=4  , labels="height",     srt=-90)
+text(x=5, y=4.5  , labels="hypotenuse", srt= 30)
+text(x=2.7, y=2.2, labels="a")
+text(x=7.7, y=2.3, labels=expression(90*degree))
+text(x=7.7, y=5.5, labels="b")
+```  
+
+# outside the lines  
+Here is an example that draws lines outside the plotting region. It is from the [web](http://biostat.mc.vanderbilt.edu/wiki/Main/DrawingOutsidePlot) of course. The author states that the code was taken from Section 3.4.3 *Annotating the margins* in Paul Murrell's "R Graphics" book. I adjusted the **mar** parameter separately in the two figures to improve the appearance.  
+
+```{r Murell1, fig.asp=0.5}
+y1 <- rnorm(100)
+y2 <- rnorm(100)
+
+par(mfrow = c(2, 1), xpd = NA, mar=c(2,0,2,0)) # use mar
+# First figure
+plot(y1, type = "l", axes = FALSE, xlab = "", ylab = "", main = "")
+box(col = "grey")
+mtext("Left end of margin", adj = 0, side = 3)
+lines(x = c(20, 20, 40, 40), y = c(-7, max(y1), max(y1), -7),
+   lwd = 3, col = "grey")
+# Second figure
+par(mar=c(2,0,0,0)) # <------------------------- use mar
+plot(y2, type = "l", axes = FALSE, xlab = "", ylab = "", main = "")
+box(col = "grey")
+mtext("Right end of margin", adj = 0, side = 3)
+mtext("Label below x = 30", at = 30, side = 1)
+lines(x = c(20, 20, 40, 40), y = c(7, min(y2), min(y2), 7),
+   lwd = 3, col = "grey")
+```
+
+# legend outside  
+This next example, from the same website, and originally due to Murell, shows how to draw a legend outside the plotting region. (Recall that the _plotting region_ is a subset of the _figure region_ which is a subset of the _device region_, and that the figure region consists of the plot region plus the inner margins.) Notice that `xpd=NA` is used to set clipping to the device region, and the `mar` parameter is used to expand the right margin. This example also demonstrates how to alternate symbols in a point plot by making `pch` a vector, and how to suppress axis labels using `ann=FALSE`. The x- and y- arguments of `legend()` give the position of the upper left corner of the box, I think, but I am not sure of that.    
+```{r Murell2, fig.asp=0.5}
+par(xpd=NA, mar=c(3, 3, 2, 8))
+plot(-4:4, (-4:4)^2, pch=1:2, ann=FALSE)
+legend(c("odd","even"), pch=1:2, x=4.7, y=16)
+```
+
+# outer margins
+The following examples are from [programmingR](http://www.programmingr.com/content/controlling-margins-and-axes-oma-and-mgp/).  The outer margins of a plot are the sections outside of the plot region and inner margins. By default they are all set to zero `par()$oma = ` `r par()$oma`. You can change them by using `par()` to reset either **oma**, **omd**, or **omi**. These parameters differ only in their units. **oma** uses lineheight as a unit, **omd** uses fractions of the device region; and **omi** uses inches. Each of them is a 4-element numeric vector. Position one is the bottom outer margin, position two is the left outer margin, position three is the top outer margin, and position four is the right outer margin. Elements 1 and 3 define the starting points of the x and y axes, respectively, while elements 2 and 4 define the end points. The oma, omd and omi parameters are equivalent except for their units, so changing one of them automatically changes the other two. Here are a few examples.  
+
+```{r bryan1}
+x <- 1:100
+y <- log(x)  
+par(c("oma","omi","omd")) # default values
+# plot using default margin settings
+```  
+
+We plot the data using the default margin settings.  
+```{r bryan2}
+plot(x, y, type="l", col = "red", 
+     ylab = "Y Label", xlab = "X Label")
+title(main="Default")
+```  
+
+## oma example  
+In this next plot we use **oma** to add 4 lines to the top and bottom *outer margins*.  
+```{r bryan3}
+par(oma = c(4, 0, 4, 0))
+plot(x, y, type="l", col = "red", ylab = "Y Label", xlab = "X Label")
+title("oma = c(4, 0, 4, 0)")
+```  
+
+## omd example  
+In this next plot we use **omd** to increase the size of all four outer margins.  
+```{r bryan4}
+par(omd = c(.15, .85, .15, .85))
+plot(x, y, type="l", col = "red", ylab = "Y Label", xlab = "X Label")
+title("omd = c(.15, .85, .15, .85)")
+```  
+
+# mgp for axes   
+The **mgp** parameter allows us to change the way axes and labels are spatially arranged. It is a three item vector in which the first value represents the distance of the axis label from the axis, the second value is the distance of the tick labels (numbers) from the axis, and the third value is the distance of the axis from the plot. As with the oma option discussed above, the distances are given in line widths. The defaults for the mgp setting are c(3, 1, 0). The examples below illustrate the effects of changing the various mgp values. Note: the mgp.axis() function in the Hmisc package can be used to change these settings for each axis individually.  
+
+## Move axis labels with mgp
+In the following plot we use **mgp** to move the labels closer to the axes.  
+```{r bryan5}
+par(mgp = c(0, 1, 0))
+plot(x, y, type="l", col = "red", ylab = "Y Label", xlab = "X Label")
+title("mgp = c(0,1,0)")
+```  
+
+## mgp for tick labels 
+Recall that tick labels are the numbers you see beside the ticks. In this next plot we use **mgp** to move the tick labels an absurd distance from the ticks themselves.    
+
+```{r bryan6}
+par(mgp = c(0, 3, 0))
+plot(x, y, type="l", col = "red", ylab = "Y Label", xlab = "X Label")
+title("mgp =  c(0, 3, 0)")
+```  
+
+## Move axes with mgp
+In this next example we use **mgp** to move the axes themselves farther out from the plot.  
+```{r bryan7}
+par(mgp = c(0, 3, 2))
+plot(x, y, type="l", col = "red", ylab = "Y Label", xlab = "X Label")
+title("mgp =  c(0, 3, 2)")
+```  
+
+# transparent colors  
+Plot a circle with radius 2 centered at (1.0,1.5) and fill it with the color `myred <- adjustcolor("red",alpha.f=0.25)`. Put a "+" at the center of the circle. **Hints**: To make your vertices for polygon first consider a circle around the origin. As you go around the circle the angle $\theta$ to the x-axis increases from $0$ to $2\pi$, the x-coordinate of the point on the circle is $\cos\theta$ and the y-coordinate is $\sin\theta$. For a circle centered at $(x_c,y_c)$ the x-coordinate is $x=x_c+\cos\theta$ and the y-coordinate is $y=y_c+\sin\theta$. Make a theta with 361 points on $0 \le \theta \le 2\pi$. Use `fig.asp=1` in your chunk header.  
+
+**Solution** 
+```{r ex11, fig.asp=1}
+plot(x=0, y=0, type="n", ann=F,
+     xlim=c(-1,3), ylim=c(0,3)
+     )
+title(xlab="x",ylab="y",main="Red disk")
+grid(col="lightgray",lty=1,lwd=0.5)
+theta <- seq(0,2*pi,length.out=361)
+xc <- 1.0
+yc <- 1.5
+x <- xc + cos(theta); 
+y <- yc + sin(theta)
+#lines(x=x,y=y,col="red")
+myred <- adjustcolor("red",alpha.f=0.25)
+polygon(x,y,col=myred,border=NA)
+points(xc,yc,pch="+",cex=2)
+```  
+
+See the **par()** help entry for more information about mgp. The book "R Graphics" by Paul Murell, is the definitive reference on base graphics.  
+
+# ... as argument   
+It is interesting that a function can be created with `...` as its only argument, but it is even more interesting, and helpful to know, that variables passed to such a function can be accessed by the order in which they appear in the call. Consider the following example:
+
+```{r dotdotdot1}
+f <- function(...){
+  ..1 * ..2  * ..3
+}
+f(x=3,z=2,y=5) # [1] 30
+```  
+
+# verbatim code  
+The following examples are from Yihui Xie's [blog](https://yihui.name/en/2017/11/knitr-verbatim-code-chunk/) 
+
+## a verbatim chunk  
+Right after the right curly bracket of the chunk header, on the same line, not separated by a space, put `backquote-r-space-singlequote-singlequote-backquote`. Here is an example (which you should look at in the html), but notice that in the R Markdown document it is enclosed in four backquotes because you have to use at least N+1 backquotes to wrap up N backquotes.  
+
+````
+```{r, eval=TRUE}`r ''`
+1 + 1
+```
+````  
+
+## Verbatim inline code  
+Put two backquotes before it and two after it and then put a line feed right after the r. Here is an example:  
+This will show a verbatim inline R expression `` {r
+1 + 1} `` in the output.  
+
+For a fuller treatment, see Yihui's [blog post](https://yihui.name/en/2017/11/knitr-verbatim-code-chunk/).
+
+#  <-  and  =   
+Some coders use `=` as the only assignment operator, which is fine. My habit is to use the assignment operator `=` only in function calls, and `<-` everywhere else. I find this makes code easier to read.  
+
+```{r geek2}
+mul <- function(x,y) x*y
+
+if (exists("x")) rm(x)
+if (exists("y")) rm(y)
+mul(x = 2, y = 3)
+exists("x") || exists("y") # FALSE
+
+mul(x <- 2, y <- 3)
+exists("x") && exists("y") # TRUE
+rm(x); rm(y)
+```  
+
+# <<-  and  <-    
+R has three assignment operators: `<-`, `<<-` and `=`. The first two can be used in either direction. For example, `x <- 5` and `5 -> x` both assign the value 5 to the name x. For coding clarity, the arrow with the double head should generally be avoided, as the following example illustrates. For more information type `?assignOps` in the console.
+```{r geek1}
+funfun1 <- function(){
+  x <- 3
+  return(invisible(NULL))
+}
+
+funfun2 <- function(){
+  x <<- 3
+  return(invisible(NULL))
+}
+
+if (exists("x")) rm(x)
+funfun1()
+exists("x") # FALSE
+
+funfun2()
+exists("x") # TRUE
+```  
+
+# Replacement functions  
+
+There is an excellent discussion of replacement functions on [stackoverflow](https://stackoverflow.com/questions/11563154/what-are-replacement-functions-in-r). The following is a trivial example:  
+
+```{r}
+`squareof<-` <- function (x, value) x <- sqrt(value)  
+x <- 10 # x must exist for `squareof<-` to work
+squareof(x) <- 4
+x
+```  
+
+# S4 methods  
+
+See [Stackoverflow](https://stackoverflow.com/questions/4143611/sources-on-s4-objects-methods-and-programming-in-r).   
+
+
+# Rotate axis labels    
+
+The following example is from the [R FAQ](https://cran.r-project.org/doc/FAQ/R-FAQ.html#How-can-I-create-rotated-axis-labels_003f) page at CRAN.  
+
+To rotate axis labels (using base graphics), you need to use text(), rather than mtext(), as the latter does not support par("srt").   
+
+When plotting the x axis labels, we use srt = 45 for text rotation angle, adj = 1 to place the right end of text at the tick marks, and xpd = TRUE to allow for text outside the plot region. You can adjust the value of the 0.25 offset as required to move the axis labels up or down relative to the x axis. See ?par for more information.
+
+Also see Figure 1 and associated code in Paul Murrell (2003), “Integrating grid Graphics Output with Base Graphics Output”, _R News_, **3/2**, 7–-12.
+
+```{r}
+## Increase bottom margin to make room for rotated labels
+par(mar = c(7, 4, 4, 2) + 0.1)
+## Create plot with no x axis and no x axis label
+plot(1 : 8, xaxt = "n",  xlab = "")
+## Set up x axis with tick marks alone
+axis(1, labels = FALSE)
+## Create some text labels
+labels <- paste("Label", 1:8, sep = " ")
+## Plot x axis labels at default tick marks
+text(1:8, par("usr")[3] - 0.25, srt = 45, adj = 1,
+     labels = labels, xpd = TRUE)
+## Plot x axis label at line 6 (of 7)
+mtext(1, text = "X Axis Label", line = 6)
+```
+
+
+# candidates {.unnumbered}    
+• Confidence intervals: ff you repeat the experiment many times, 95% of the time the best fit line will fall in the confidence interval. 
+• Prediction intervals: if you repeat the experiment many times, 95% of the points will fall within the prediction intervals.  
+• How to add a grid, as in ggplot2.  
+• Using text(). Murell Figure 3.16, page 84, upper right panel. The code is at the bottom of page 85. Note that the values of position are analogous to the system for margins: 1 is bottom; 2 is left side; 3 is top 4 is right side.  
+• How to automate package installation using code something like the following, but with a switch based on platform:  
+
+```  
+# Packages necessary for this assignment
+want <- c("knitr","rmarkdown","ggplot2", etc.)
+
+# Install any missing packages
+have <- want %in% rownames(installed.packages())
+if ( any(!have) ) 
+  install.packages( 
+    want[!have],
+    type="mac.binary.mavericks", # <--------- NB
+    repos="http://cran.us.r-project.org" )  
+
+# Load necessary packages
+for(pkg in want) 
+  library(package=pkg, character.only=TRUE)
+```
+
+• Baptiste on StackOverflow says that extra YAML blocks can be used anywhere inside the document, and commented out with `#` like this: 
+
+---
+# here's a comment
+# ```{r}
+# x <- pi
+# print(x)
+# ```
+--- 
+
+However it appears that the `#` is no longer necessary, as the following shows.
+
+---
+This comment won't appear, and the following inline code will not be evaluated.   
+```{r}
+x <- pi
+print(x)
+```
+--- 
+
+

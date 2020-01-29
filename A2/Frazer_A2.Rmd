@@ -1,0 +1,311 @@
+---
+title: "Frazer_A2"
+author: "Neil Frazer"
+date: "January 24, 2020"
+output: 
+  html_document: 
+    code_folding: hide
+    theme: cerulean
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    number_sections: false
+---
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 14px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px
+}
+pre{/*preformatted text*/ 
+    font-size: 12px
+}
+p.caption {/* figure captions */ 
+    font-size: 0.9em;
+    font-style: italic; 
+} 
+</style>
+
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+library(knitr)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  ",
+               fig.align="center",
+               collapse=TRUE, 
+               #echo=FALSE,
+               fig.asp=1/gr,
+               dev="png"
+               )
+```  
+
+# Important Reminders {-}  
+
+- Before doing anything else, please save this file (A2.Rmd) to a file with the name Smith_A2.Rmd, substituting your actual surname for Smith. The file extension ".Rmd" indicates an R Markdown file. If you call it Smith_Assignment2.Rmd or IanSmith_A2.Rmd or SmithA2.Rmd or anything else, it may go astray in my files.
+
+- Next, please change the title in the title entry of the YAML headers above, and substitute your name into the author entry.  
+
+- Finally, *knit* the file and read the resulting html. You can read the Rmd directly of course, but when you are working on an assignment you will find the instructions are clearer in the html.  
+
+# Remarks {-}
+
+1. This is an R Markdown document. It should open without a hitch in RStudio. An excellent introduction to R Markdown is given in [Chapter 27](https://r4ds.had.co.nz/r-markdown.html) of the book [R for Data Science](https://r4ds.had.co.nz) by Hadley Wickham and Garrett Grolemund. R Markdown files consist of narrative interspersed with code chunks. The narrative may also contain _inline code._  
+
+1. The [R Markown Reference Guide](https://www.rstudio.com/wp-content/uploads/2015/03/rmarkdown-reference.pdf) is brief and comprehensive and you will often have reason to consult it. For example, to save time in lengthy computations, you can put `cache=TRUE` in a chunk header so that the computations in that chunk aren't repeated every time you knit; they will only be repeated if the code in the chunk changes. This can be really helpful if your laptop is slow. 
+
+1. The block at the beginning of this R Markdown file is the [YAML](https://en.wikipedia.org/wiki/YAML) header. Notice that it begins and end with a line of three dashes.  
+
+1. The block following it is a so-called _cascading style sheet_ or [CSS](https://en.wikipedia.org/wiki/Cascading_Style_Sheets).
+
+1. The next block is a chunk with the label `setup`. You should always have a setup chunk, if only to clean up variables that might be cluttering your workspace. My setup chunk then _loads_ the knitr package. Then it sets some _default chunk options_ so that I don't have to set them myself in subsequent chunk headers. Default options can overruled in any chunk.  
+
+1. If you don't have the cleanup line in your setup chunk, your assignment might knit just fine for you but not for me, the difference being that you had some variables lurking in your environment that I don't have in mine. BTW, to see what variables you have in your environment, click on the Environment tab in the upper right pane of RStudio. Click on a variable there to see its contents displayed in the editor window. Nice huh?  
+
+1. You should **always knit your assignment before submitting**, and look at the html, because that is the first thing I will do when I critique it. However, you should send me only the Markdown file, not the html.
+
+1. Assignment numbers are usually keyed to a Chapter in DBDA2E (Kruschke, our textbook), so this, our first Assignment, is A2.  
+
+# An example  
+`cars` is a set of data in the R datasets package. To see what is in it, click the RStudio tab that says packages, then click on the name `datasets`, then click on the "C", then click on the name `cars`. There you will find that the data give the speed of cars and the distances taken to stop, and that the data were recorded in the 1920s(!). Now here is a chunk of R code that makes a plot. If you are new to R, the code won't be very meaningful, but don't worry: we will all be helping each other in class, and you will soon catch on. Now click on the little green triangle in the upper right of the code chunk and you should see the resulting plot appear right beneath the code. Convenient, yes? To run all the chunks **above** this chunk, you would click on the little downward pointing gray triangle.
+
+```{r carsplot1}
+plot(cars)
+fit <- lm(dist ~ speed, data=cars) # lm() stands for linear model
+abline(fit, col="red") # abline() makes straight lines
+```  
+
+The above plot was quick and convenient---R is great for that---but it is unscientific because it lacks a caption and a legend, and the axis labels lack units. Next is a version with a caption, a legend, and slightly better cosmetics.  
+
+```{r carsplot2, fig.width=6.5, out.width="95%", fig.asp=0.6, fig.align="center", fig.cap="**Figure 2.** The cars data from the datasets package. Notice that the best-fit line is absurd because it predicts a negative stopping distance for very low speeds. We should really be regressing the **log**(stopping distance) on the **log**(speed)."} 
+
+## To see what is going on in these next two statements, which are
+## purely cosmetic, see the help entry for plot(), specifically the 
+## list of graphical parameters there with their default values. 
+par(mar=c(5.1, 4.1, 1, 1)) # reduce margin size on sides 3 and 4
+par(mgp=c(2.6, 1, 0))      # move axis labels nearer to axes
+
+plot(cars, xlim=c(0,25), ylim=c(-12,120),
+     panel.first=grid(), cex.lab=1.1,
+     xlab="speed (mph)", ylab="stopping distance (ft)"
+     )
+fit <- lm(dist ~ speed, data=cars) 
+abline(fit, col="red") 
+legend("topleft", inset=0.05, bty="n", pch=c(1,NA), lty=c(NA,1),   
+       col=c("black","red"),
+       #title="Cars Data",
+       legend=c("data", "best L2 fit")
+       )
+```  
+
+# Inline code  
+Never type, or drag and drop, a computed number into another place in your code or narrative. If you want a computed number in your narrative use _inline code_. For example, in regard to the plot above we might say that the slope of the regression line is `r round(fit$coefficients[2], 2)` miles per hour. (If you are reading this in the html, look at the Rmd to see how the number `r round(fit$coefficients[2], 2)` was put there.) Notice the lower case "r" that follows the opening backtick.  
+
+The above text and code chunk are just an example, and you should delete them from your submitted assignment, along with all my other remarks and reminders, unless you want to tell me something about them. (But don't delete the YAML headers, the CSS, the setup chunk, or the statement of each problem.) The following material is the real assignment:  
+
+# Exercise 2.0 
+(not in text, 5 points) List the technical terms you noticed while reading this chapter, with a question mark before the ones you haven't encountered before. **Hint:** Technical terms are often italicized where first introduced. Now look up at least one of the terms that are new to you---Wikipedia is always a good place to begin---and give a definition that makes sense to you.  
+
+# Solution 2.0  
+The technical terms I noticed are: credibility, prior distribution, posterior distribution, judicial exoneration, double blind, noise, posterior predictive check, location parameter, scale parameter, highest density interval (HDI), sampling distribution, summary statistic, outliers, heavy-tailed distribution (sometimes called a fat-tailed distribution), nonparametric model, resampling (more often called bootstrapping), desiderata, and null hypothesis significance testing (NHST).    
+
+Things that you might have looked up:
+
+* desiderata (desideratum):
+    + Things wanted or needed
+    + http://www.dictionary.com/browse/desiderata
+
+* null hypothesis significance testing:
+    + "The main statistical end product of NHST is the P value, which is the most commonly encountered inferential statistic and most frequently misunderstood, misinterpreted, and misconstrued statistics in the biomedical and public health literature. Most teachers of statistics do not fully understand P values. Not even specialist scientists can easily explain them." (http://www.sjsu.edu/faculty/gerstman/StatPrimer/hyp-test.pdf)
+    + Seeks to calculate the probability that the data observed were generated purely by chance
+    + "The null hypothesis H0, is defined as the event that there is no relationship between two measured phenomena, or no association among groups." (https://en.wikipedia.org/wiki/Null_hypothesis)
+
+# Exercise 2.1  
+(page 31, 5 points)  If you haven't coded before, don't bother making plots. Otherwise, please try plotting the various models. Remember that the independent variable is discrete, so a line plot is inappropriate, but bar plots and point plots are OK.  
+
+# Solution 2.1  
+The question is What kind of bias (or lack of bias) is expressed by each model? In the usual sense of the word 'bias', one would say that model A is unbiased---see the [principle of indifference](https://en.wikipedia.org/wiki/Principle_of_indifference) in Wikipedia. Model B favors sides with higher numbers, and model C favors sides with smaller numbers.  
+
+Just for fun---you didn't have to do this for your answer---here is a code chunk I wrote to plot the probability models. Notice that I used the `fig.cap` chunk option to create a caption. You can make a figure caption part of the narrative, but the advantage of `fig.cap` is that the caption is tied to the chunk; if you drag and drop the chunk, the caption comes with it.
+
+```{r ex2.1_Neil, fig.width=6, out.width="90%", fig.asp=0.5, fig.cap="**Figure 2.1(a)** Comparison of three probability mass functions for a tetrahedal die."}
+xn <- 1:4            # four-sided die
+pA <- rep(0.25, 4)   # model A
+pB <- xn/10          # model B
+pC <- 12/25/xn       # model C
+
+par(mfrow=c(1,3))    # three plots side by side
+col <- "gray"
+ylim <- c(0, 0.5)
+xlab <- paste(xn)    # character vector
+ylab <- expression("Probability of " * italic(x))
+
+par(oma=c(2, 0, 0, 0)) # create outer margin on side 1
+
+# left panel
+par(mar=c(3, 4.4, 3, 1)) # inner margins
+barplot(pA, col=col, ylim=ylim, names=xn, cex.lab=1.5,
+        ylab=ylab  , xlab=""  , main="Model A")
+
+# center panel
+par(mar=c(3, 2, 3, 1)) # inner margins
+barplot(pB, col=col, ylim=ylim, names=xn,
+        ylab=""    , xlab=""   , main="Model B")
+
+# right panel
+par(mar=c(3, 2, 3, 1)) # inner margins
+barplot(pC, col=col, ylim=ylim, names=xn,
+        ylab=""    , xlab=""   , main="Model C")
+
+# common x-label
+mtext(expression("Die value, " * italic(x)), 
+      side=1, line=0, outer=TRUE)
+```  
+</br>  
+
+Next is a (lightly edited) plot by a former student that illustrates how the base plot system lets you customize. Notice how she used the functions `plot.new()`, then `plot.window()` to set up a coordinate system, then `axis()`, twice, to make custom axes, then `title()` to make the axis labels and the title at the top of the plot. For some reason she expressed models B and C as functions.  
+
+```{r ex2.1_Emily, fig.cap="**Figure 2.1(b)** Comparison of three probability mass functions for a tetrahedal die."}
+plot.new() 
+plot.window(xlim = c(.5, 4.5), ylim = c(0, .6), xaxs = "i")
+box()
+axis(1, at = 1:4, labels = c("1","2","3","4"),
+     col.axis = "grey30", las = 1)
+axis(2, col.axis = "grey30", las = 1)
+title(main = "Comparing Tetrahedral Die Models",
+      col.main = "green4",
+      xlab = "x", ylab = "p(x)",
+      col.lab = "black", font.lab = 3)
+#box("figure", col = "red")
+
+A <- rep(0.25,4)
+B <- function(x) x/10
+C <- function(x) 12/(25*x)
+x <- c(1,2,3,4)
+
+points(x, A   , col="blue" , cex=1.3, pch=15)
+lines( x, A   , col="blue" , lty="solid", lwd=0.5)
+points(x, B(x), col="green", cex=1.3, pch=16)
+lines( x, B(x), col="green", lty="solid", lwd=0.5)
+points(x, C(x), col="red"  , cex=1.3, pch=17)
+lines( x, C(x), col="red"  ,lty="solid", lwd=0.5)
+
+legend("top", inset=.05, horiz=TRUE,
+       title="Models", 
+  	   legend=c("A","B","C"), 
+       pch=c(15,16,17), 
+  	   col=c("blue","green","red"))
+```
+
+Here is a plot from another former student. He used the `las` parameter to make the axis tick labels horizontal, and the function `mtext()` to put a single y-axis label in the left margin.  
+
+```{r, ex2.1_Zack, fig.cap="**Figure 2.1(c)** Comparison of three probability mass functions for a tetrahedal die."}  
+par(mfrow = c(3,1), mar = c(3,6,2,1), family = 'sans')
+
+X <-  1:4
+modA <-  rep(1/4, length(X))
+modB <-  X/10
+modC <-  12/25/X
+mods <- list(modA, modB, modC) 
+
+width <- rep(1,4)
+names <- 1:4
+for(i in 1:3) { # loop over models
+  barplot( mods[[i]], width=width, space = 0.05, 
+           ylim = c(0,0.5), las = 1, names=xn,
+           main = paste('Model', LETTERS[1:3])[i]
+           )
+} # end for
+mtext(side = 2, 'Probability', outer = T, line = -1.5, font = 1)
+```  
+<br>
+
+Next is a lightly edited plot by Ivan that uses `ggplot()`, from the popular graphics package ggplot2, created by Hadley Wickham, who works for RStudio. The "gg" in the name stands for "grammar of graphics". In their book [R for Data Science](https://r4ds.had.co.nz/), which you can read for free, online, Garrett Grolemund and Hadley Wickham give a nice introduction to ggplot in [Chapter 3](https://r4ds.had.co.nz/data-visualisation.html), and a more detailed treatment in [Chapter 28](https://r4ds.had.co.nz/graphics-for-communication.html).  
+
+To understand the ggplot syntax in Ivan's chunk, it is helpful to remember that `+`, the familiar infix operator for addition, is actually a [generic function](https://rstudio-education.github.io/hopr/s3.html#generic-functions) with methods for objects of different classes. It knows what to do with objects of class `gg` or `ggplot`. I aligned the plus signs in Ivan's code to emphasize how the figure, which he calls `b`, is constructed by "adding" successive features. In R, the `plot()` function is also generic, and the ggplot package gives it a method for objects of class `ggplot`.     
+
+```{r ex2.1_Ivan, fig.align="center", out.width="85%", fig.asp=0.5, fig.cap="**Figure 2.1(d)** Comparison of three probability mass functions for a tetrahedal die."}
+
+library("ggplot2") 
+
+a <- data.frame(
+       x = rep(paste(1:4), 3),
+       Model = rep(paste("Model", LETTERS[1:3]), each=4),
+       prob = c(rep(1/4,4), (1:4)/10, 12/25/(1:4) ) 
+       )
+                  
+b <- ggplot(data = a, mapping = aes(x=x, y=prob) )     + 
+     geom_bar(aes(), stat = "identity", 
+              position = position_dodge(width = 0.9))  +
+     labs(x = "Value of x", y = "p(x)")                +
+     ggtitle("Probabilities in the Different Models")  +
+     theme_bw()                                        + 
+     facet_wrap(~Model)
+
+plot(b)
+```  
+<br>
+
+The ggplot package is powerful, and the results are always attractive, but I have been resistant to it because the functions in base graphics have a greater resemblance to the plot functions I know from other computer languages and because I find it easier to fine-tune them. (Also, they are what Kruschke used to make the attractive multi-panel plots in our textbook.) "Base graphics", by the way, is the way users refer to the functions in the **graphics** package, which is loaded automatically when R starts up. If you look in RStudio's packages pane, you will see it there. Base graphics and **ggplot2** graphics both depend on the more primitive graphics functions in the **grid** package. You can call the functions in the grid package directly if you want.  
+
+Finally here is an attractive barplot from Kei that uses base graphics. Notice the sly way Kei made `p1` into a vector of length 4 by adding `x*0`, a 4-vector of zeros, to 1/4, and how `barplot()` treats each row of the matrix `p` as a separate distribution.    
+
+```{r ex2.1_sam, fig.asp=0.7, fig.align="center", fig.cap="**Figure 2.1(d)** Comparison of three probability mass functions for a tetrahedal die."} 
+
+x <- c(1, 2, 3, 4)
+p1 <- 1/4 + x*0
+p2 <- x/10
+p3 <- 12/(25*x)
+
+p <- matrix(c(p1, p2, p3), ncol = 4, byrow = TRUE)
+rownames(p) <- paste("Model", c("A","B","C"))
+colnames(p) <- x
+
+barplot(p, main="Probability distribution by number on Die",
+        xlab="Number on Die", col=c("navy","pink", "purple"), 
+        beside = TRUE, 
+        legend = rownames(p),
+        args.legend=list(x="top")
+        )
+```
+
+# Exercise 2.2  
+(page 31, 5 points)  Answer in narrative with $\le$ 100 words. 
+
+# Solution 2.2  
+Data set 1: \{\#1's:25, \#2's:25, \#3's:25, \#4's:25\}.    
+Data set 2: \{\#1's:48, \#2's:24, \#3's:16, \#4's:12\}.  
+If, as stated in the problem, our _prior probabilities_ about the three models are Pr(A) = Pr(B) = Pr(C) = 1/3 then Data set 1 will result in a high posterior probabilty for Model A, and Data set 2 will result in a high posterior probability for Model C.  
+
+# Exercise 2.3  
+(Not in our text, 5 points) Consider Figure 2.6, p. 29, in DBDA2E (our text). Two of the data points fall above the vertical bars. Does this mean that the model does not describe the data well? Explain. **Hint:** How many data points are there? Since the credible predicted intervals are for 95%, how many data points might reasonably be expected to fall outside those intervals?  
+
+# Solution 2.3  
+There are about 50 data points. On average 5% of them can be expected to fall outside the 95% credible predicted intervals. 5% of 50 is 2.5, so it is not at all surprising that 2 data points fall outside those intervals.  
+
+<!-- # Remark on Ex 2.2     -->
+<!-- (This is a bit geeky; feel free to skip it.) To do Ex 2.2 exercise properly, your sampling distribution would be the [multinomial distribution](https://en.wikipedia.org/wiki/Multinomial_distribution) (a generalization of the binomial distribution) and it would be natural to chose a [Dirichlet](https://en.wikipedia.org/wiki/Dirichlet_distribution) (pronounced dir'-i-klet) distribution (a generalization of the beta distribution) for the prior, because it is _conjugate_ (a term you will see later) to the multinomial. -->
+
+<!-- The beta and Dirichlet distributions frequently arise in biology and the earth sciences. To see that the Dirichlet distribution is a generalization of the beta distribution it is helpful to first notice that a sample from the continuous beta distribution is more than a single probability, Pr(Heads)=p say. It is actually a discrete probability **distribution**: Pr(Heads)=p, Pr(Tails)=1-p. Similarly, a sample from the continuous Dirichlet distribution is also a discrete probability distribution; in the context of Exercise 2.2 such a sample would be Pr(1)=p1, Pr(2)=p2, Pr(3)=p3, Pr(4)=p4, where p1+p2+p3+p4=1. -->
+
+<!-- What particular Dirichlet distribution corresponds, in Exercise 2.2, to zero prior knowledge of the die? The uniform Dirichlet distribution with all concentration parameters equal to 1.   -->
+
+# R Studio tip  
+When you are working on a file in the editor pane, make sure you are in the right directory by going to the Session menu, selecting "Set Working Directory", and choosing "To Source File Location". You can do the same thing with the little blue cogwheel in the files pane.  

@@ -1,0 +1,178 @@
+---
+title: "Tucker_A3"
+author: "Michael Tucker"
+date: "2020-01-31"
+output: 
+  html_document: 
+    code_folding: hide
+    theme: cerulean
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    number_sections: false
+    self_contained: true
+---
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 13px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.math{ font-size: 10pt;}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px;
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px;
+}
+pre{/*preformatted text*/ 
+    font-size: 12px;
+}
+p.caption {/* figure captions */ 
+    font-size: 0.9em;
+    font-style: italic; 
+} 
+</style>
+
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+library(knitr)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+## Set default chunk options
+opts_chunk$set(comment="  ",
+               #collapse=TRUE, 
+               #echo=FALSE,
+               fig.asp=1/gr,
+               dev="png",
+               fig.width=6,
+               out.width="80%",
+               fig.align="center"
+               )
+``` 
+
+# Introduction {-}  
+This assignment is based very roughly on Chapter 3 of our text, but it will also give you a bit of practice making, exporting, and importing figures.  
+
+# Reminders {-}    
+
+- Don't forget to immediately:  
+  * save-as this file to `(your surname)_A3.Rmd`;  
+  * change the title field in the YAML headers to `(your surname)_A3`; and    
+  * change the author field to `(your name)`.  
+- If you have not already done so, please download the folder of software `DBDA2Eprograms` that goes with our text. You can get it [here](https://sites.google.com/site/doingbayesiandataanalysis/software-installation) by clicking the first downward-pointing blue arrow at the bottom of the page.    
+- If you cannot find the error in a code chunk, put `eval=FALSE` in the chunk header, so it doesn't crash the knit, and go on to the next exercise.   
+- Help each other, but don't copy.  
+
+# Exercise 3.0  
+(not in text, 10 points) List the technical terms you encountered in this chapter, with a '?' after those you have not encountered before. Look up at least one of the terms that are new to you---Wikipedia is always a good place to begin---and give a definition that makes sense to you.  
+
+# Solution 3.0  
+(Put your narrative here.)
+
+# Exercise 3.01  
+(not in text, 10 pts)  If you don't have a research project yet, just say "I don't have a research project yet." Otherwise, describe your research problem in $\le$ 100 words answering the following questions: What are the data? What are the predictors (sometimes referred to as covariates or explanatory variables)? Which of them are inherently positive quantities? What statistical distribution(s) do you think describe your observation errors?  
+
+# Solution 3.01   
+(Put your narrative here.)  
+
+# Exercise 3.1  
+(not in text, 10 pts) Create a function in R that converts Fahrenheit temperatures to Celsius temperatures. Use your function to make a plot with Fahrenheit on the x-axis and Centigrade on the y-axis. Use `xlim=c(-50, 120)`. **Hints:** Recall the formula $C = (F - 32)\cdot 5/9$. Use `xlab=expression(degree*F)` and `ylab=expression(degree*C)` in your `plot()` call. 
+
+# Solution 3.1a  
+(Put your solution chunk here.)  
+
+# Exercise 3.2a  
+(A take-off Ex 3.2 on 70 of our text, 10 pts) Create a chunk that makes a figure in your html and ALSO saves it to a separate file in the same folder as your Rmd. For your figure, make a graph of the function 
+
+$$
+p(x) = 
+\begin{cases}
+  x & \mathrm{if\ \ } \epsilon \le x \le 1/\epsilon \\
+  0 & \mathrm{otherwise}
+\end{cases} \tag{1}
+$$  
+
+on the interval $[0,\epsilon^{-1}]$. Give your function the name `recip` with arguments `x` and `eps`. In your function definition give `eps` the default value 0.01, and use that value for your plot. Use `integrate()` to check that your function has unit integral. In your plot call use `ylab=expression(y==x^{-1})`. Use the `fig.cap` chunk option to give your figure the caption "**Figure 3.2a.** The truncated-reciprocal probability density function."      
+
+**Hints:** To save a figure separately when using R Markdown, put `fig.path="fig-"` in the chunk header. The portable network graphics (png) format is best for html, but you may also want to save the figure as a pdf. If so, put `dev=c("png", "pdf")` in the chunk header. You will then get nice looking html as well as a saved pdf of your figure. If you want to save it as an encapsulated postscript file use `dev=c("png", "eps")`. If you wanted to save all your figures this way, you would make those chunk options default values in the setup chunk.      
+
+# Solution 3.2a  
+(Make your solution plot here.)  
+
+# Exercise 3.2b  
+(5 pts) Read in the png image that you saved, and plot it again by putting `knitr::include_graphics("fig-ex3.2a-1.png")` in a chunk. Use the `fig.cap` chunk option to give your figure the caption "**Figure 3.2b.** Here for a second time is the plot I made in Ex 3.2a." 
+
+# Solution 3.2b  
+(Put your image here.)  
+
+# Exercise 3.2c  
+(5 pts) Read in the png image that you made in Ex 3.2a and plot it again using the Markdown syntax `![caption text]("fig-ex3.2a-1.png")`. Give your figure the caption "**Figure 3.2(c).** Here for the third time is the plot I made in Ex 3.2a."   
+
+# Solution 3.2c  
+(Put the image here.)  
+
+# Exercise 3.3  
+(a take-off on the trivial Ex 3.3, page 70 of our text, 10 points) The [beta PDF](https://en.wikipedia.org/wiki/Beta_distribution) has the simple kernel $\theta^{(\alpha-1)}(1-\theta)^{(\beta-1)}$, and is widely used in statistics because---jargon warning!---it is an easy prior for probabilities and proportions, and because it is a natural conjugate prior for the binomial and Bernoulli sampling distributions. It deserves to be much better known in the physical sciences because it is easily scaled and stretched to be a prior for whatever quantity you want. Plot the beta PDF with shape parameters $\alpha=\beta=4$. **Hints:** Use the R-supplied `dbeta()` with 301 points. Use the names `a` and `b` for the shape parameters. For your x-label use `expression(theta)` and for your y-label use  
+`bquote(p[Theta](theta~"|"~alpha==.(a)~","~beta==.(b)))`.  
+
+The functions `expression()` and `bquote()` return _language objects_ that graphics devices know how to print. The `bquote()` function evaluates whatever is wrapped in `.()`        
+
+# Solution 3.3  
+(Put your solution here.)  
+
+# Exercise 3.4  
+(not in text, 5 points) Copy the file `HGN.csv` from Kruschke's `DBDA2Eprograms` folder into your ERTH695 folder. Then read HGN.csv with the statement `hgn <- read.csv("HGN.csv")`.  
+Make a data frame `hgn1` from `hgn` by moving columns `Name` and `Group` to positions 1 and 2.  Display `hgn1` using `kable()` which is in the `knitr` package. Use the `align` argument of `kable()` to space the columns nicely. Use the `caption` argument of `kable()` to give your table the caption "**Table 3.5.** Kruschke's HGN dataset with the Name and Group columns first."      
+
+# Solution 3.4  
+(Put your chunk here.)  
+
+# Exercise 3.5  
+(not in our text, 10 points) Use inline code where possible to:  
+
+a. Display the first three rows of the data frame `hgn` (or `hgn1`) using bracket notation with row numbers.  
+b. Display the first three rows using the `head()` function.  
+c. What are the type and class of the `Hair` component? Hint: Use the functions `typeof()` and `class()`. What are the levels of the `Hair` component? Hint: Use the `levels()` function.   
+d. Change the group component to a factor, using the `factor()` function, and display the result with its levels.  
+e. Display the Hair component by referring to it three different ways: using brackets with column number, using brackets with column name, and using the selection operator `$`. The selection operator is an example of [syntactic sugar](https://en.wikipedia.org/wiki/Syntactic_sugar).  
+
+# Solution 3.5  
+(Put your work here.)  
+
+# Exercise 3.6  
+(not in text, 5 points) If `X` and `Y` are matrices then `t(X)` gives a transpose and `X %*% Y` is the usual matrix multiplication you may be used to from Matlab. In R, vectors aren't row or column vectors as in Matlab; they are just vectors. Use `x <- 1:3` and `y <- 2:4` to illustrate (a) that `x*y` gives you element-by-element multiplication, (b) ` x %*% y` gives you an inner product and (c) `x %o% y` gives you an outer product, i.e., the matrix you would get if `x` were a column and `y` were a row.  
+
+# Solution 3.6  
+(Put your work here.)  
+
+## More about matrices    
+- If you go to the packages tab in RStudio and type "Matrix" in the search window you will find a number of special packages for matrix calculations. The **matlib** package was written especially for teaching and learning matrix algebra.   
+- Matrices in R can have row names and column names if you want, which is handy because names are easier to remember than numbers. The main difference between a matrix and a data frame is that the matrix elements must be all be the same type (e.g., number, logical or character).   
+- Most of the time when you want to make a matrix you use the `matrix()` function. However it is sometimes handy to know that you can make a vector into a matrix or array just by changing its `dim` attribute, as in the following examples. Note that the matrix is filled column by column and the layer number is the third index. Arrays can have as many dimensions as you want. Like matrices, arrays can also have dimension names.  
+
+```{r ex3.6b}
+x <- 1:6 
+x # vector
+dim(x) <- c(2, 3) # 2 rows, 3 columns
+x # matrix
+x <- 1:12 
+x # vector
+dim(x) <- c(2, 3, 2)
+x # array
+```
+
+# Et cetera  
+(If you have a question, or a suggestion for class, tell me here.)
+
