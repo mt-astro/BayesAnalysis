@@ -1,0 +1,179 @@
+---
+title: "A4"
+author: "Neil Frazer"
+date: "2020-02-07"
+output: 
+  html_document: 
+    code_folding: hide
+    theme: cerulean
+    toc: true
+    smooth_scroll: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: false
+---
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 13px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.math{ font-size: 10pt;}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px;
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px;
+}
+pre{/*preformatted text*/ 
+    font-size: 12px;
+}
+p.caption {/* figure captions */ 
+    font-size: 0.9em;
+    font-style: italic; 
+} 
+</style>
+
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+library(knitr)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  ",
+               collapse=TRUE, 
+               #echo=FALSE,
+               fig.asp=1/gr,
+               dev="png"
+               )
+options(digits=3)
+```  
+
+# Introduction  
+This assignment is based closely on Chapter 4 of our text. This chapter reviews probability mass functions (PMFs) and probability density functions (PDFs), and introduces a concept called the highest density interval (HDI), which is a generalization of the frequentist notion of confidence interval. This chapter also tests our understanding of joint, marginal and conditional probability.   
+
+# Reminders      
+- If you have a chunk that crashes the knit, put `eval=FALSE` in the header and a note to me in the narrative. Your assignments should always knit---it's the first thing I do with them.  
+- If you are printing numbers anywhere it may be a good idea to put the statement `options(digits=3)` in your setup chunk. Otherwise you are looking at a lot of unnecessary digits. The digits option can be changed in any other chunk, as needed.  
+- When explanation is needed, try to put it in the narrative rather than as comments in the code. Comments in the code should be succinct.  
+- Inside a LaTeX math expression you get a subscript $x_i$ by typing `$x_i$`, and a superscript $x^i$ by typing `$x^i$`.  
+- When you are adapting one of Kruschke's scripts to a problem, and you see a call to `openGraph()` or `saveGraph()`, please delete it or comment it out.  
+
+# Exercise 4.0  
+(not in text, 10 points)  
+List the technical terms you encountered in this chapter, with a '?' after those you have not encountered before. Look up at least one of the terms that are new to you, and give a definition that makes sense to you.  
+
+# Solution 4.0  
+
+## Terms
+(List your terms here.)  
+
+## Definitions  
+(Put your definition(s) here.)  
+
+# Exercise 4.1    
+(A take-off on Kruschke's Ex 4.1, p95. 15 points) This exercise has parts (a), (b) and (c).   
+
+## Ex 4.1(a)  
+Fill in the blanks in the following sentence. The `HairEyeColor` dataset gives the distribution of hair, eye color, and sex in (number here) _________ statistics students from the University of _________ reported by ___________ in the year ________.  
+
+**Hint:** In the console type `?datasets::HairEyeColor`, or else go to the packages tab in RStudio and click on `datasets`, then `H`, then `HairEyeColor`.  
+
+## Solution 4.1(a)  
+(Put your completed sentence here.)  
+
+## Ex 4.1(b)  
+[Mosaic plots](https://en.wikipedia.org/wiki/Mosaic_plot) are often the best way to quickly grasp the implications of data set with class `table` such as `HairEyeColor`. Consider the following figure and its caption. Does it lead you to suspect there was a lot of hair coloring being sold near universities at the time of the survey (Yes or No? Be honest). Given the time and place in which this dataset was collected, are the subjects likely to be mainly of European descent (Yes or No?). Use Google or Google Scholar to see what recent research has to say about the distribution of blond hair among males and females of European descent, and give a sentence containing a link to a not-too-sensational summary.  
+
+```{r ex4.1b, fig.asp=0.8, out.width="90%", fig.cap="**Figure 4.1A.** Hair and eye color for female (upper panel) and male (lower panel) statistics students. Relative column widths indicate the proportions of hair color. Within each column, relative block heights indicate the proportions of eye color."}
+par(mfrow=c(2, 1), oma=c(2,1,0,0))
+
+## upper panel
+par(mar=c(0,2,2,0))
+mosaicplot(HairEyeColor[ , ,"Female"], las=1,
+           main="", ylab="Females", xlab="")
+
+## lower panel
+par(mar=c(1,2,1,0))
+mosaicplot(HairEyeColor[ , ,  "Male"], las=1, 
+           main="", ylab="Males", xlab="")
+
+## axis labels
+mtext("Hair color", side=1, line=0, outer=TRUE, cex=1.15)
+mtext("Eye color" , side=2, line=0, outer=TRUE, cex=1.15)
+```
+
+## Solution 4.1(b)    
+(Put your narrative answer here.)  
+
+## Ex 4.1(c)  
+First an **example**: suppose you want the percentage of males that have green eyes. The following chunk, and sentence with some inline code does the job. The mosaic plots above allow a partial reality check on the answer.     
+  
+```{r ex4.1c}
+# dimnames(HairEyeColor)
+tb <- HairEyeColor[ , , "Male"]
+em <- apply(tb, MARGIN="Eye", FUN=sum)
+em <- em/sum(em)*100
+```  
+In the `HairEyeColor` dataset, `r round(em["Green"], digits=1)`% of males have green eyes.  
+
+Now the **exercise**: write a chunk, then use some inline code to complete the following sentence.  
+
+In the `HairEyeColor` dataset, only _________% of brown-haired students have green eyes, but ___________% of red-haired students have green eyes.  
+
+## Solution 4.1(c)  
+(Put your chunk and completed sentence here.)  
+
+# Exercise 4.2  
+(page 96 of text, 5 points)  
+The code you need to modify for this exercise is `RunningProportion.R` which is in the folder `DBDA2Eprograms` that you downloaded for the last assignment.  
+
+# Solution 4.2  
+(Put your chunk here. Give it a caption that begins with "**Figure 4.2.**")
+
+# Exercise 4.3  
+(This is Ex 4.3 on page 96 of our text, 5 points)  
+
+# Solution 4.3  
+(Put your solution narrative here.)
+
+# Exercise 4.4 
+(This is Ex 4.4 on page 96 of our text, 15 points) For part (a), in which you make a chunk out of Kruschke's `IntegralOfDensity.R`, be sure to comment out the calls to his `openGraph()` and `saveGraph()`.  
+
+# Solution 4.4(a)  
+(Put your solution chunk here. It should make a figure whose caption begins with "**Figure 4.4.**").  
+
+## Solution 4.4(b)  
+(Put your evaluation of the integral here in the form of a single displayed LaTeX equation.)  
+
+# Exercise 4.5  
+(This is Ex 4.5 from page 96 of our text, 10 points)  
+
+## Solution 4.5(a)  
+(Put your solution chunk here. It should make a figure whose caption begins with "**Figure 4.5.**").  
+
+## Solution 4.5(b)  
+(Put your narrative solution here.)  
+
+# Exercise 4.6  
+(This is Ex 4.6 on page 97 of our text, 10 points)  
+This exercise tests our understanding of joint, conditional and marginal probability. We need to remember the **product rule**: $\Pr(F,G)=\Pr(F|G)\Pr(G)$. We also need the **marginalization rule** for a probability mass function: $\Pr(F)=\sum_G \Pr(F,G)$.  
+
+**Hints:** We are given $\Pr(G)$ in the statement of the problem. We are given $\Pr(F|G)$ in a table, with $F$ as the column index and $G$ as the row index. Proceed as follows: (1) use the product rule to make the table $\Pr(F,G)$; (2) use marginalization to make $\Pr(F)$; (3) check independence. If $\Pr(F,G)\ne\Pr(F)\Pr(G)$ for any choice of $F$ and $G$ then food and grade are not independent. The choices F = ice cream and G = first grade worked for me.   
+
+# Solution 4.6  
+(Put your solution here.)  
+
+# Et cetera department  
+If you have a question, or a suggestion for class, tell me here.
+
