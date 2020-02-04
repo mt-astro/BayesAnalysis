@@ -90,7 +90,9 @@ Fill in the blanks in the following sentence. The `HairEyeColor` dataset gives t
 **Hint:** In the console type `?datasets::HairEyeColor`, or else go to the packages tab in RStudio and click on `datasets`, then `H`, then `HairEyeColor`.  
 
 ## Solution 4.1(a)  
-(Put your completed sentence here.)  
+
+Fill in the blanks in the following sentence. The `HairEyeColor` dataset gives the distribution of hair, eye color, and sex in 592 statistics students from the University of Delaware reported by Snee in the year 1974 (but sex data added in 1992 by Friendly).  
+
 
 ## Ex 4.1(b)  
 [Mosaic plots](https://en.wikipedia.org/wiki/Mosaic_plot) are often the best way to quickly grasp the implications of data set with class `table` such as `HairEyeColor`. Consider the following figure and its caption. Does it lead you to suspect there was a lot of hair coloring being sold near universities at the time of the survey (Yes or No? Be honest). Given the time and place in which this dataset was collected, are the subjects likely to be mainly of European descent (Yes or No?). Use Google or Google Scholar to see what recent research has to say about the distribution of blond hair among males and females of European descent, and give a sentence containing a link to a not-too-sensational summary.  
