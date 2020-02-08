@@ -76,10 +76,24 @@ List the technical terms you encountered in this chapter, with a '?' after those
 # Solution 4.0  
 
 ## Terms
-(List your terms here.)  
+
+* probability  
+* sample space ?  
+* long-run relative frequency ?  
+* distribution  
+* discretize  
+* median  
+* highest density interval ?  
+
 
 ## Definitions  
-(Put your definition(s) here.)  
+
+* sample space:  
+  + allowed values for a given variable 
+* long-run relative frequency
+  + convergence point for a statsitical sample, i.e. the "true" probability of discretely-sampled test or experiment
+* highest density interval
+  + from the text: _"Thus, the HDI summarizes the the distribution by specifying an interval that spans most of the distribution, say 95% of it, such that every point inside the interval has a higher credibility than any point outside the interval."_ -- this doesnt make much sense to me. If only requirement is that points inside have prob greater than points outside, then wouldn't the HDI just be the infinitely narrow sliwer at the maximum prob value? or if it is forced to span a range, isn't the range arbritrary? does 95% have a physical significance here, or just chosen to be $2\sigma$ for pedagogical purposes?
 
 # Exercise 4.1    
 (A take-off on Kruschke's Ex 4.1, p95. 15 points) This exercise has parts (a), (b) and (c).   
@@ -91,7 +105,7 @@ Fill in the blanks in the following sentence. The `HairEyeColor` dataset gives t
 
 ## Solution 4.1(a)  
 
-Fill in the blanks in the following sentence. The `HairEyeColor` dataset gives the distribution of hair, eye color, and sex in 592 statistics students from the University of Delaware reported by Snee in the year 1974 (but sex data added in 1992 by Friendly).  
+The `HairEyeColor` dataset gives the distribution of hair, eye color, and sex in **592** statistics students from the University of **Delaware** reported by **Snee** in the year **1974** (but sex data added in 1992 by Friendly).  
 
 
 ## Ex 4.1(b)  
@@ -116,7 +130,8 @@ mtext("Eye color" , side=2, line=0, outer=TRUE, cex=1.15)
 ```
 
 ## Solution 4.1(b)    
-(Put your narrative answer here.)  
+
+Delaware in 1974? Definitely filled with European-based white people.   
 
 ## Ex 4.1(c)  
 First an **example**: suppose you want the percentage of males that have green eyes. The following chunk, and sentence with some inline code does the job. The mosaic plots above allow a partial reality check on the answer.     
@@ -134,38 +149,193 @@ Now the **exercise**: write a chunk, then use some inline code to complete the f
 In the `HairEyeColor` dataset, only _________% of brown-haired students have green eyes, but ___________% of red-haired students have green eyes.  
 
 ## Solution 4.1(c)  
-(Put your chunk and completed sentence here.)  
+
+```{r sol4.1c}
+
+bh = apply(HairEyeColor[ "Brown" , , ], "Eye", sum)
+rh = apply(HairEyeColor[ "Red" , , ], "Eye", sum)
+
+bh_ge = bh['Green'] / sum(bh) * 100.
+rh_ge = rh['Green'] / sum(rh) * 100.
+
+```
+
+In the `HairEyeColor` dataset, only `r round(bh_ge, 1)`% of brown-haired students have green eyes, but `r round(rh_ge,1)`% of red-haired students have green eyes.  
+
+
 
 # Exercise 4.2  
 (page 96 of text, 5 points)  
 The code you need to modify for this exercise is `RunningProportion.R` which is in the folder `DBDA2Eprograms` that you downloaded for the last assignment.  
 
 # Solution 4.2  
-(Put your chunk here. Give it a caption that begins with "**Figure 4.2.**")
+
+``` {r sol4.2, fig.cap="**Figure 4.2**"}
+# copied from DBDA2E
+N = 500 # Specify the total number of flips, denoted N.
+pHeads = 0.8 # Specify underlying probability of heads.
+# Flip a coin N times and compute the running proportion of heads at each flip.
+# Generate a random sample of N flips (heads=1, tails=0):
+flipSequence = sample( x=c(0,1), prob=c(1-pHeads,pHeads), size=N, replace=TRUE )
+# Compute the running proportion of heads:
+r = cumsum( flipSequence ) # Cumulative sum: Number of heads at each step.
+n = 1:N                    # Number of flips at each step.
+runProp = r / n            # Component by component division.
+# Graph the running proportion:
+plot( n , runProp , type="o" , log="x" , col="skyblue" ,
+      xlim=c(1,N) , ylim=c(0.0,1.0) , cex.axis=1.5 ,
+      xlab="Flip Number" , ylab="Proportion Heads" , cex.lab=1.5 ,
+      main="Running Proportion of Heads" , cex.main=1.5 )
+# Plot a dotted horizontal reference line:
+abline( h=pHeads , lty="dotted" )
+# Display the beginning of the flip sequence:
+flipLetters = paste( c("T","H")[flipSequence[1:10]+1] , collapse="" )
+displayString = paste0( "Flip Sequence = " , flipLetters , "..." )
+text( N , .9 , displayString , adj=c(1,0.5) , cex=1.3 )
+# Display the relative frequency at the end of the sequence.
+###
+# modified location of End Proportion txt so doesnt overlap with line
+###
+text( N , .5 , paste("End Proportion =",runProp[N]) , adj=c(1,0.5) , cex=1.3 )
+
+```
 
 # Exercise 4.3  
 (This is Ex 4.3 on page 96 of our text, 5 points)  
 
 # Solution 4.3  
-(Put your solution narrative here.)
+
+This seems like a perfect usage for Python's classes, but I couldn't figure out object orientation in r in the 5 min I spent poking around so I left everything as an array of lists. Poor performance, but gets the job done. 
+
+Here's the simple analytical solution: 
+10 is one of 6 options, so $p(10)=1/6$  
+10 and Jack are two of 6 possible options, so just double the chances since chances per suit are equal for both options. $p(10 || J) = p(10)+p(J) = 1/6+1/6 = 1/3$ (here use $||$ as "or" symbol, not conjuction)
+
+``` {r sol4.3, collapse=FALSE}
+
+
+#  now, this could be done analytically pretty easily, but 
+# I want to try some things out in r so
+# this is my caveat that I know I'm not doing this the most 
+# efficient way
+
+Ncard = 48 # number of cards in pinocle deck
+suits = c('heart', 'diamond', 'club', 'spade')
+values = c('9', '10', 'J', 'Q', 'K', 'A')
+Ncopy = 2
+
+cards = list()
+counter = 0
+for (suit in suits){
+  for (value in values){
+    for (i in range(0, Ncopy)){
+      # neither option seems to work
+      cards = append(cards, list("s"=suit, "v"=value))
+#      cards[counter] = list("s"=suit, "v"=value)
+#      counter = counter + 1
+    }
+  }
+}
+
+#not sure why this returns null, must be missing some nuance of nested lists?
+print(cards[20]$s)
+
+```
 
 # Exercise 4.4 
 (This is Ex 4.4 on page 96 of our text, 15 points) For part (a), in which you make a chunk out of Kruschke's `IntegralOfDensity.R`, be sure to comment out the calls to his `openGraph()` and `saveGraph()`.  
 
 # Solution 4.4(a)  
-(Put your solution chunk here. It should make a figure whose caption begins with "**Figure 4.4.**").  
+
+```{r sol 4.4a, fig.cap="**Figure 4.4**"}
+
+# copied from DBDA2E
+###
+# Graph of normal probability density function, with comb of intervals.
+xlow  = 0 # Specify low end of x-axis.
+xhigh = 1 # Specify high end of x-axis.
+dx = 1/10000               # Specify interval width on x-axis
+# Specify comb of points along the x axis:
+x = seq( from = xlow , to = xhigh , by = dx )
+# Compute y values, i.e., probability density at each value of x:
+y = 6*x*(1.-x)
+# Plot the function. "plot" draws the intervals. "lines" draws the bell curve.
+plot( x , y , type="h" , lwd=1 , cex.axis=1.5
+	, xlab="x" , ylab="p(x)" , cex.lab=1.5 ,
+	, main="Normal Probability Density" , cex.main=1.5 )
+lines( x , y , lwd=3 ,  col="skyblue" )
+# Approximate the integral as the sum of width * height for each interval.
+area = sum( dx * y )
+# Display info in the graph.
+```
 
 ## Solution 4.4(b)  
-(Put your evaluation of the integral here in the form of a single displayed LaTeX equation.)  
+
+Question says to compute the integral of the function but then points to an expectation value, but just drop the $x$ from Eq. 4.7 and all works out. 
+
+$$
+I = \int_{0}^1 p(x) \; dx = 6\int_{0}^1 x(1-x)\;dx = 6(\int_0^1 x\; dx - \int_0^1 x^2\;dx ) = 6( 0.5x^2 - 1/3x^3) |_0^1 = 3(1)^2 - 2(1)^3 = 3-2 = 1
+$$
+
+
 
 # Exercise 4.5  
 (This is Ex 4.5 from page 96 of our text, 10 points)  
 
 ## Solution 4.5(a)  
-(Put your solution chunk here. It should make a figure whose caption begins with "**Figure 4.5.**").  
+
+``` {r sol5.5a, fig.cap="**Figure 4.5a**"}
+
+# Graph of normal probability density function, with comb of intervals.
+meanval = 55.0               # Specify mean of distribution.
+sdval = 7.2              # Specify standard deviation of distribution.
+xlow  = meanval - 3.5*sdval # Specify low end of x-axis.
+xhigh = meanval + 3.5*sdval # Specify high end of x-axis.
+dx = sdval/10               # Specify interval width on x-axis
+# Specify comb of points along the x axis:
+x = seq( from = xlow , to = xhigh , by = dx )
+# Compute y values, i.e., probability density at each value of x:
+y = ( 1/(sdval*sqrt(2*pi)) ) * exp( -.5 * ((x-meanval)/sdval)^2 )
+# Plot the function. "plot" draws the intervals. "lines" draws the bell curve.
+
+plot( x , y , type="h" , lwd=1 , cex.axis=1.5
+	, xlab="x" , ylab="p(x)" , cex.lab=1.5 ,
+	, main="Normal Probability Density" , cex.main=1.5 )
+lines( x , y , lwd=3 ,  col="skyblue" )
+
+```
+Couldn't get the following code to work for some reason...
+```{r failed_sol4.5a, eval=FALSE, collapse=FALSE}
+# Approximate the integral as the sum of width * height for each interval.
+area = sum( dx * y )
+bounded_2sigma = 0.0
+x0 = meanval - 2.0*sdval
+x1 = meanval + 2.0*sdval
+
+# loop through x values and store the corresponding y value if x[i] within +/- 2 sigma
+# not sure why this didn't work
+# get "arg is of length zero" error ...
+for (i in 0:length(x)) {
+  print(i)
+  print(x[i])
+  if ( (x[i] >= x0) & (x[i] <= x1) ){
+    bounded_2sigma = bounded_2sigma + y[i]
+  }
+}
+frac = bounded_2sigma / area
+print(frac)
+
+```
 
 ## Solution 4.5(b)  
-(Put your narrative solution here.)  
+
+simple proportions here. We know the typical "z-score" formula $z = (x-\mu)/\sigma$ for normal dist. params $\mu, \sigma$. For 66% encapsulation, this is *almost* $z=1$, but we'll use the more exact $z\approx0.97$ for our calculations. Now we can solve for the stddev $\sigma$ from the z-score equation:
+$$
+z = \frac{x-\mu}{\sigma} \rightarrow \sigma = \frac{x - \mu}{z} = \frac{177 - 162}{0.97} = \frac{15}{0.97} \approx 15.5
+$$
+
+Finding $\mu$ is trivial, we are given the central value of $\mu=162~$cm.
+
 
 # Exercise 4.6  
 (This is Ex 4.6 on page 97 of our text, 10 points)  
@@ -174,8 +344,28 @@ This exercise tests our understanding of joint, conditional and marginal probabi
 **Hints:** We are given $\Pr(G)$ in the statement of the problem. We are given $\Pr(F|G)$ in a table, with $F$ as the column index and $G$ as the row index. Proceed as follows: (1) use the product rule to make the table $\Pr(F,G)$; (2) use marginalization to make $\Pr(F)$; (3) check independence. If $\Pr(F,G)\ne\Pr(F)\Pr(G)$ for any choice of $F$ and $G$ then food and grade are not independent. The choices F = ice cream and G = first grade worked for me.   
 
 # Solution 4.6  
-(Put your solution here.)  
+
+Joint prob is just $P(G)\times P(F|G)$, so we can write the join P table:
+
+Grade|  IC  |Fruit | French Fries  
+-----|------|------|-------------
+1st  | 0.06 | 0.12 | 0.02
+6th  | 0.12 | 0.06 | 0.02
+11th | 0.18 | 0.06 | 0.36
+$P(F)$| 0.36|0.24  | 0.40
+
+Now to check against $P(G)\times P(F)$: $P(G) = (0.2, 0.2, 0.6)$ and $P(F) = (0.36, 0.24, 0.40)$, sthe values for $P(F)\times P(G)$ are
+
+$P(F),P(G)$ | 0.36 | 0.24 | 0.40
+------------|------|------|------
+0.2         | 0.072|0.048 | 0.08
+0.2         | 0.072|0.048 |0.08
+0.6         |0.216 |0.144 | 0.24
+
+And we see the values from the first tabl;e are not equal to the values from the second table, which would be the case if the variables were independent. Tried to do this with a fancy data frame but still getting used to $r$. 
 
 # Et cetera department  
 If you have a question, or a suggestion for class, tell me here.
+
+- Going over this last problem and using joint probabilities would be useful, either in-class or I can stop by during office hours. Joint probabilities are really interesting to me, as they encode the most information about a sample, but I struggle with understanding when and where they can and cannot be implemented/utilized. 
 
