@@ -1,0 +1,457 @@
+---
+title: "Frazer_A4"
+author: "Neil Frazer"
+date: "2020-02-07"
+output: 
+  html_document: 
+    code_folding: hide
+    theme: cerulean
+    toc: true
+    smooth_scroll: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: false
+---
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 13px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.math{ font-size: 10pt;}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px;
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px;
+}
+pre{/*preformatted text*/ 
+    font-size: 12px;
+}
+p.caption {/* figure captions */ 
+    font-size: 1.0em;
+    font-style: italic; 
+} 
+</style>
+
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+library(knitr)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  ",
+               collapse=TRUE, 
+               #echo=FALSE,
+               fig.asp=1/gr,
+               dev="png",
+               fig.width=7,
+               out.width="90%",
+               fig.align="center"
+               )
+options(digits=3)
+```  
+
+# Introduction  
+This assignment is based closely on Chapter 4 of our text. This chapter reviews probability mass functions (PMFs) and probability density functions (PDFs), and introduces a concept called the highest density interval (HDI), which is a generalization of the frequentist notion of confidence interval. This chapter also tests our understanding of joint, marginal and conditional probability.   
+
+# Reminders      
+- If you have a chunk that crashes the knit, put `eval=FALSE` in the header and a note to me in the narrative. Your assignments should always knit---it's the first thing I do with them.  
+- If you are printing numbers anywhere it may be a good idea to put the statement `options(digits=3)` in your setup chunk. Otherwise you are looking at a lot of unnecessary digits. The digits option can be changed in any other chunk, as needed.  
+- When explanation is needed, try to put it in the narrative rather than as comments in the code. Comments in the code should be succinct.  
+- Inside a LaTeX math expression you get a subscript $x_i$ by typing `$x_i$`, and a superscript $x^i$ by typing `$x^i$`.  
+- When you are adapting one of Kruschke's scripts to a problem, and you see a call to `openGraph()` or `saveGraph()`, please delete it or comment it out.  
+
+# Exercise 4.0  
+(not in text, 10 points)  
+List the technical terms you encountered in this chapter, with a '?' after those you have not encountered before. Look up at least one of the terms that are new to you, and give a definition that makes sense to you.  
+
+# Solution 4.0  
+The technical terms you may have noticed in this chapter are: probability, sample space, brain lateralization, belief, long-run relative frequency, subjective belief, mutually exclusive events, probability distribution, discrete outcomes, probability mass function, discretize, bins, probability mass, continuous distribution, probability density (function), normal distribution (sometimes called the Gaussian distribution), distribution mean (as distinct from sample mean), distribution variance (distinct from sample variance), distribution standard deviation (distinct from sample standard deviation), central tendency, median, mode(s) of a distribution, highest density interval (HDI), equal-tailed intervals, skewed distribution, equal area tails, joint probability distribution, marginal probability distribution, marginalizing over a variable (integrating out a variable), conditional probability (distribution), condition on (a verb, Krushcke says 'conditionalize on'), independence (of random variables), random number generator, seed (for a random number generator).  
+
+## A few definitions  
+- **Marginalization** is the integration (summation) process that turns a density (probability) function of several variables into one of fewer variables. For example $p(\alpha | y)=\int\! d\beta \int\! d\gamma\ p(\alpha,\beta,\gamma \rvert y)$. The now-missing variables are said to have been "marginalized out", and the remaining variables are said to be the margin. This usage can initially seem counterintuitive because one would expect a marginalized variable to be the margin, or part of it. 
+- As another example, in Ex 4.1 the M/F sex variable is marginalized out and the margin is then hair color and eye color. Notice that in the call to `apply()` the `MARGIN` argument is given the value `c("Hair","Eye")`; thus sex is marginalized out.  
+- **HDI**: Consider the set of intervals $A_i$ for which $\int_{\cup A_i} \!dx\, p(x|\cdots)=0.7$, say. Then the 70% HDI is the set of such intervals whose lengths sum to the lowest value. For unimodal PDFs, the x% HDI is always the shortest-length interval over which the integral is x%.  
+- **Conditional probability**: the probability of an event given that another event is known to have occurred. A conditional probability **density** is the probability density of a variable, x say, given that other quantities (which may be continuous or discrete) have particular values.  
+
+# Exercise 4.1    
+(A take-off on Kruschke's Ex 4.1, p95. 15 points) This exercise has parts (a), (b) and (c).   
+
+## Ex 4.1(a)  
+Fill in the blanks in the following sentence. The `HairEyeColor` dataset gives the distribution of hair, eye color, and sex in (number here) _________ statistics students from the University of _________ reported by ___________ in the year ________.  
+
+**Hint:** In the console type `?datasets::HairEyeColor`, or else go to the packages tab in RStudio and click on `datasets`, then `H`, then `HairEyeColor`.  
+
+## Solution 4.1(a)  
+The `HairEyeColor` dataset gives the distribution of hair, eye color, and sex in **`r sum(HairEyeColor)`** statistics students from the University of **Delaware** reported by **R. D. Snee** in the year **1974**.   
+
+## Ex 4.1(b)  
+[Mosaic plots](https://en.wikipedia.org/wiki/Mosaic_plot) are often the best way to quickly grasp the implications of data set with class `table` such as `HairEyeColor`. Consider the following figure and its caption. Does it lead you to suspect there was a lot of hair coloring being sold near universities at the time of the survey (Yes or No? Be honest). Given the time and place in which this dataset was collected, are the subjects likely to be mainly of European descent (Yes or No?). Use Google or Google Scholar to see what recent research has to say about the distribution of blond hair among males and females of European descent, and give a sentence containing a link to a not-too-sensational summary.  
+
+```{r ex4.1b, dev.args=list(bg="lightyellow"), fig.asp=0.8, out.width="90%", fig.cap="**Figure 4.1(b).** Hair and eye color for female (upper panel) and male (lower panel) statistics students. Relative column widths indicate the proportions of hair color. Within each column, relative block heights indicate the proportions of eye color."}
+par(mfrow=c(2, 1), oma=c(2,1,0,0))
+
+## upper panel
+par(mar=c(0,2,2,0))
+mosaicplot(HairEyeColor[ , ,"Female"], las=1,
+           main="", ylab="Females", xlab="")
+
+## lower panel
+par(mar=c(1,2,1,0))
+mosaicplot(HairEyeColor[ , ,  "Male"], las=1, 
+           main="", ylab="Males", xlab="")
+
+## axis labels
+mtext("Hair color", side=1, line=0, outer=TRUE, cex=1.15)
+mtext("Eye color" , side=2, line=0, outer=TRUE, cex=1.15)
+```
+
+## Solution 4.1(b)    
+
+I had assumed, without ever thinking about it, that the natural frequency of hair color is the same in males and females, but that more women than men color their hair. Those mosaic plots support my suspicion because the blond column for females is significantly wider than the blond column for males.  
+
+There were probably very few people of color at the university of Delaware in 1974, so it is a safe bet that the students in this survey were nearly all of European descent.  
+
+A recent study in *Nature Genetics* indicates that among people of European descent the frequency of blondness is naturally higher in women than in men. *Nature Genetics* has a paywall, but the [Financial Times](https://www.ft.com/content/0e425dfa-3f42-11e8-b7e0-52972418fec4) gives a brief and not-too-sensational summary of the research.    
+
+## Ex 4.1(c)  
+First an example: suppose you want the percentage of males that have green eyes. The following chunk, and sentence with some inline code does the job. The mosaic plots above allow a partial reality check on the answer.     
+  
+```{r ex4.1c}
+# dimnames(HairEyeColor)
+tb <- HairEyeColor[ , , "Male"]
+em <- apply(tb, MARGIN="Eye", FUN=sum)
+em <- em/sum(em)*100
+# em # Brown=35.1, Blue=36.2, Hazel=16.8, Green=11.8
+```  
+In the `HairEyeColor` dataset, `r round(em["Green"], digits=1)`% of males have green eyes.  
+
+Now the exercise: write a chunk, then use some inline code to complete the following sentence.  
+
+In the `HairEyeColor` dataset, only _________% of brown-haired students have green eyes, but ___________% of red-haired students have green eyes.  
+
+## Solution 4.1(c)  
+```{r sol4.1c}
+
+## brown haired students
+tb <- HairEyeColor["Brown", , ]
+## sum over Sex
+bh <- apply(tb, MARGIN="Eye", FUN=sum)
+## convert frequency to percentage
+bh <- bh/sum(bh)*100 # eye color % for brown-haired students
+# show(bh) # check
+
+## red haired students
+tb <- HairEyeColor["Red", , ]
+## sum over Sex
+rh <- apply(tb, MARGIN="Eye", FUN=sum)
+## convert frequency to percentage
+rh <- rh/sum(rh)*100 # eye color % for red-haired students
+# show(rh) # check
+```  
+
+In the `HairEyeColor` dataset, only `r round(bh["Green"], digits=1)`% of brown-haired students have green eyes, but `r round(rh["Green"], digits=1)`% of red-haired students have green eyes.  
+
+I like my solution because it preserves names that can be used in the inline code, but the following chunk by Andrew is simpler and does not use `apply()`.  
+
+```{r} 
+b  <- HairEyeColor["Brown", ,]
+bg <- HairEyeColor["Brown","Green",]
+bg <- sum(bg)/sum(b)*100 # % of brown-haired students with green eyes
+
+r  <- HairEyeColor["Red", ,]
+rg <- HairEyeColor["Red","Green",]
+rg <- sum(rg)/sum(r)*100 # % of red-haired students with green eyes
+```
+
+# Exercise 4.2  
+(page 96 of text, 5 points) The code you need to modify for this exercise is `RunningProportion.R` which is in the folder `DBDA2Eprograms` that you downloaded for the last assignment.  
+
+# Solution 4.2  
+Here I use a lightly modified version of Kruschke's `RunningProportion.R` code, the code he used to make Figure 4.1 on page 75. He gives a listing of the code on page 94.
+
+```{r ex4.2, fig.width=10, out.width="100%", fig.align="left", fig.cap="**Figure 4.2.** Running proportion of heads when flipping a coin. The x-axis is plotted on a logarithmic scale so that we can see the first few flips as well as the long-run trend after many flips. The code for this figure is modified from the listing on page 94 of DBDA2E (Kruschke, 2015)."}
+N = 500 # total flips.
+pHeads = 0.8 # Pr(heads).
+# Flip N times, compute a running proportion of heads.
+# Random sample of N flips (heads=1, tails=0):
+set.seed(1235)  # repeatability
+if(TRUE) { # TRUE for sample(), FALSE for rbinom()
+flipSequence <- # use sample()
+  sample(x=c(0,1), prob=c(1-pHeads,pHeads), size=N, replace=T)
+} else {        # use rbinom()
+  flipSequence <- rbinom(n=N, size=1, prob=pHeads)
+}
+r = cumsum( flipSequence ) # # of heads at each step.
+n = 1:N                    # # of flips at each step.
+runProp = r / n            # element-by-element division.
+# Graph the running proportion:
+plot( n , runProp , type="o" , log="x" , col="skyblue" ,
+      xlim=c(1,N) , ylim=c(0.0,1.0) , cex.axis=1.5 ,
+      xlab="Flip Number" , ylab="Proportion Heads" , cex.lab=1.5 ,
+      main="Running Proportion of Heads" , cex.main=1.5 )
+# Dotted horizontal reference line:
+abline( h=pHeads , lty="dotted" )
+# Display beginning of flip sequence:
+flipLetters <- paste(
+  c("T","H")[flipSequence[1:10]+1], 
+  collapse="" 
+  )
+displayString <- paste0( "Flip Sequence = ", flipLetters, "...")
+text( N, .5, displayString, adj=c(1,0.5), cex=1.3 )
+# Display relative frequency at the end of the sequence.
+text( N, 0.4, paste("End Proportion =", runProp[N]),
+      adj=c(1,0.5) , cex=1.3 # See par() in Rhelp for adj
+      )
+```
+
+# Exercise 4.3  
+(This is Ex 4.3 on page 96 of our text, 5 points)  
+
+# Solution 4.3  
+There are six possible card values (9,10,J,Q,K) with equal numbers of each in the deck. In a single draw, (a) the probability of a 10 is therefore 1/6 and (b) the probability of drawing either a 10 or a Jack is 1/6 + 1/6 = 1/3. In this last calculation we used the fact that it isn't possible to get both 10 and a Jack in a one-card draw. In statistical parlance those are _mutually exclusive events_.
+
+# Exercise 4.4 
+(This is Ex 4.4 on page 96 of our text, 15 points) For part (a), in which you make a chunk out of Kruschke's `IntegralOfDensity.R`, be sure to comment out the calls to his `openGraph()` and `saveGraph()`.  
+
+# Solution 4.4(a)  
+We are given a pdf $p(x) = 6x(1-x)$ on the domain $0 \le x \le 1$. Kruschke doesn't mention that it is an example of a [beta distribution](https://en.wikipedia.org/wiki/Beta_distribution) with both shape parameters equal to 2. We use a lightly edited version of Kruschke's `IntegralOfDensity.R` to plot the PDF, and to numerically estimate its integral from 0 to 1.  
+```{r ex4.4, fig.cap="**Figure 4.4.** The beta distribution with both shape parameters equal to 2. The area beneath the curve is the integral from 0 to 1."}
+# Adapted from Kruschke's IntegralOfDensity.R
+# by commenting out some of the statements.
+# source("../Codes&Data/DBDA2E-utilities.R")
+xlow <- 0; xhigh <- 1  # domain of p(x) = 6x(1-x)
+dx <- 0.01             # step
+# Specify comb of points along the x axis:
+x <- seq( from = xlow, to = xhigh, by = dx )
+y <- 6*x*(1-x)
+# openGraph(width=7,height=5)
+par(mar=c(3.5,4,2,1), mgp=c(2.5, 1, 0))
+plot( x, y, type="h", lwd=1, yaxs="i",
+      panel.first=grid(),
+      cex.axis=1.12, cex.lab =1.2, cex.main=1.3,
+      col="skyblue", ylim=c(0, 1.6),
+      xlab=expression(italic(x)), 
+      ylab=expression( italic(p)*(italic(x)) ), 
+      main=expression( italic(p)(italic(x)) == 
+        6*italic(x)(1-italic(x)))    
+      )
+lines( x, y, lwd=3, col="skyblue" ) # p(x)
+# Approximate the integral from 0 to 1.
+area <- sum( dx * y )
+# Display info in the graph.
+text(x=0.5, y=0.5*max(y), 
+     bquote(integral(p(x)~d*x, 0, 1) %~~% .(area)),
+     # paste("Area =", area), 
+     cex=1.3, pos=3)
+```  
+
+## Solution 4.4(b)  
+Evaluate the integral using calculus we are told. Here is the result:  
+$$
+\int_0^1 \!\! 6x(1-x) \, dx 
+= 6\left[\frac{x^2}{2}-\frac{x^3}{3}\right]^1_0 
+= 6\left[\frac{1}{2}-\frac{1}{3}\right] 
+= 3-2
+= 1
+$$  
+## Solution 4.4(c)  
+
+I guess what he is asking us is whether the integral is equal to 1. Well, yes, it is.  
+
+## Solution 4.4(d)  
+
+By inspection, the maximum is at $x=1/2$. By calculus, using the product rule, the derivative is 
+
+$$
+\frac{d}{dx}\left[6x(1-x)\right] 
+= 6(1-x) + 6x(-1) 
+= 6 - 12x
+= 6(1-2x)
+$$  
+
+which vanishes at $x=1/2$. The second derivative is a constant (-12), so we know without graphing that $x=1/2$ is a maximum not a minimum. Sigh.  
+
+# Exercise 4.5  
+(This is Ex 4.5 from page 96 of our text, 10 points)  
+
+## Solution 4.5(a)  
+We estimate the probability mass under the normal curve from $\mu - \sigma$ to $\mu + \sigma$ by adapting Kruschke's code `IntegralOfDensity.R`. In the following chunk I have simplified his calls to `bquote()` by removing the calls to `paste()`.  
+
+```{r ex4.5a, fig.width=8, out.width="95%", fig.cap="**Figure 4.5.** Estimating the area under a normal probability curve within one standard deviation from the mean."}
+par(mar=c(4,4,2,1), mgp=c(2.5,1,0))
+# source("DBDA2E-utilities.R")
+# Graph of normal probability density function, with comb of intervals.
+meanval <- 0.0               # mean of distribution.
+sdval <- 0.2                 # standard deviation of distribution.
+xlow  <- meanval - 3.5*sdval # start of x-axis.
+xhigh <- meanval + 3.5*sdval # end of x-axis.
+dx <- sdval/10               # step size between x-values
+# Specify comb of points along the x axis:
+x <- seq( from = xlow, to = xhigh, by = dx )
+# Compute y values, i.e., probability density at each value of x:
+#y <-  1/sdval/sqrt(2*pi) * exp( -0.5 * ( (x-meanval)/sdval )^2 )
+y <- dnorm(x, meanval, sdval) # also works
+# plot() draws the intervals. lines() draws the bell curve.
+plot( x, y, yaxs="i", col="skyblue",
+      type="l", lwd=3, ylim=c(0, 2.2),
+      panel.first=grid(),
+      cex.axis=1.2, cex.lab=1.5, cex.main=1.4, 
+      xlab=expression(italic(x)), 
+      ylab=expression(italic(p)(italic(x))), 
+	    main="Normal Probability Density" 
+      )
+# Estimate the integral from mu - sigma to mu + sigma
+dx1 <- 0.1*dx
+x <- seq( from = meanval - sdval, to = meanval + sdval, by = dx1 )
+y <- 1/sdval/sqrt(2*pi) * exp( -.5*( (x-meanval)/sdval)^2 )
+lines( x, y, type="h", lwd=1, col="skyblue" )
+# Approximate the integral as the sum of width * height for each interval.
+area <- sum( dx1 * y )
+# Display info in the graph.
+text( meanval-sdval-0.2, .9*max(y), pos=4,
+      bquote( mu == .(meanval)),
+      adj=c(1,.5), cex=1.3 )
+text( meanval-sdval-0.2, .75*max(y), pos=4,
+      bquote( sigma == .(sdval)),
+      adj=c(1,.5) , cex=1.3 )
+text( meanval+1.1*sdval, .9*max(y), pos=4,
+      bquote( Delta == .(dx)),
+      adj=c(0,.5) , cex=1.3 )
+text( meanval+1.1*sdval, .73*max(y), pos=4,
+      bquote( sum(p(x),-0.2,0.2) ~ Delta*x == .(signif(area,3)) ),
+      adj=c(0,.5) , cex=1.3 )
+```
+## Solution 4.5(b)  
+This question is an instance of the [68-95-99.7 rule](https://en.wikipedia.org/wiki/68–95–99.7_rule), and we are given more information than we need. If women's heights follow a normal distribution, and if 2/3 of the samples have heights between 147 and 177 cm, the value of $\mu$ should be about (147+177)/2 = 162 cm and the value of $\sigma$ should be about (177-147)/2 = 15 cm. 
+
+# Exercise 4.6  
+(This is Ex 4.6 on page 97 of our text, 10 points)  
+This exercise tests our understanding of joint, conditional and marginal probability. We need to remember the **product rule**: $\Pr(F,G)=\Pr(F|G)\Pr(G)$. We also need the **marginalization rule** for a probability mass function: $\Pr(F)=\sum_G \Pr(F,G)$.  
+
+**Hints:** We are given $\Pr(G)$ in the statement of the problem. We are given $\Pr(F|G)$ in a table, with $F$ as the column index and $G$ as the row index. Proceed as follows: (1) use the product rule to make the table $\Pr(F,G)$; (2) use marginalization to make $\Pr(F)$; (3) check independence. If $\Pr(F,G)\ne\Pr(F)\Pr(G)$ for any choice of $F$ and $G$ then food and grade are not independent. The choices F = ice cream and G = first grade worked for me.   
+
+# Solution 4.6  
+I found this problem confusing because the table $\Pr(F|G)$ has F=food as the column index and G=grade as the row index. First I solve it rather tediously "by hand"" using ic for ice cream, fr for fruit, ff for french fries, and g1, g6 and g11 for grade levels. After that I do it with code---twice! I like solution 3 the most.  
+
+## Solution 1      
+This is a "by-hand" solution. The information we are given is:  
+<pre>
+Pr(g1    )=0.2, Pr(g2    )=0.2, Pr(g11   )=0.6 (given in text)  
+Pr(ic|g1 )=0.3, Pr(fr|g1 )=0.6, Pr(ff|g1 )=0.1 (1st row of table)  
+Pr(ic|g6 )=0.6, Pr(fr|g6 )=0.3, Pr(ff|g6 )=0.1 (2nd row of table)  
+Pr(ic|g11)=0.3, Pr(fr|g11)=0.1, Pr(ff|g11)=0.6 (3rd row of table)
+</pre>
+
+Using the product rule, we generate the joint probabilities: 
+<pre>
+Pr(ic,g1 ) = Pr(ic|g1 )Pr(g1 ) = (0.3)(0.2) = 0.06  
+Pr(ic,g6 ) = Pr(ic|g6 )Pr(g6 ) = (0.6)(0.2) = 0.12  
+Pr(ic,g11) = Pr(ic|g11)Pr(g11) = (0.3)(0.6) = 0.18  
+Pr(fr,g1 ) = Pr(fr|g1 )Pr(g1 ) = (0.6)(0.2) = 0.12  
+Pr(fr,g6 ) = Pr(fr|g6 )Pr(g6 ) = (0.3)(0.2) = 0.06  
+Pr(fr,g11) = Pr(fr|g11)Pr(g11) = (0.1)(0.6) = 0.06  
+Pr(ff,g1 ) = Pr(ff|g1 )Pr(g1 ) = (0.1)(0.2) = 0.02  
+Pr(ff,g6 ) = Pr(ff|g6 )Pr(g6 ) = (0.1)(0.2) = 0.02  
+Pr(ff,g11) = Pr(ff|g11)Pr(g11) = (0.6)(0.6) = 0.36
+</pre>
+
+Next we generate the marginal probabilities for food preference.
+Using the marginalization rule with F = ic gives:  
+<pre>
+Pr(ic) = Pr(ic|g1)Pr(g1) + Pr(ic|g6)Pr(g6) + Pr(ic|g11)Pr(g11)  
+       =   (0.3)   (0.2) +   (0.6)   (0.2) +   (0.3)    (0.6)
+       =        0.06     +         0.12    +        0.18
+       = 0.36  
+</pre>
+and similarly for Pr(fr) and Pr(ff).  
+
+Are food preferences and grade level independent? As noted above, the definition of independence is Pr(F,G) = Pr(F)·Pr(G) for *every* F and G. From above, we have Pr(ic)·Pr(g1) = (0.36) (0.2) = 0.072, but Pr(ic,g1) = 0.06; therefore food preference and grade level are not independent.  
+
+## Solution 2   
+In the following chunk my notation differs slightly from the by-hand solution, but the differences are obvious.   
+```{r}
+## conditional distributions
+            
+pFgvnG01 <- c(ic=0.3, fr=0.6, ff=0.1) 
+pFgvnG06 <- c(ic=0.6, fr=0.3, ff=0.1)
+pFgvnG11 <- c(ic=0.3, fr=0.1, ff=0.6)
+
+# marginal for grade
+pG <- c(g1=0.2, g6=0.2, g11=0.6)
+
+# joint distribution
+pFandG01 <- pFgvnG01*pG["g1" ]
+pFandG06 <- pFgvnG06*pG["g6" ]
+pFandG11 <- pFgvnG11*pG["g11"]
+
+# marginal for food
+pF <- c(ic=0, fr=0, ff=0)
+pF["ic"] <- pFandG01["ic"] + pFandG06["ic"] + pFandG11["ic"]
+pF["fr"] <- pFandG01["fr"] + pFandG06["fr"] + pFandG11["fr"]
+pF["ff"] <- pFandG01["ff"] + pFandG06["ff"] + pFandG11["ff"]
+
+pIC_and_pG1 <- pFandG01["ic"]    
+pIC_x_pG1  <- pF["ic"]*pG["g1"]  
+```  
+
+As a result of the calculations in the foregoing chunk we find that Pr(ic)$\cdot$Pr(g1) = `r pIC_x_pG1`, whereas Pr(ic,g1) = `r pIC_and_pG1`, showing once again that food preference and grade level are not independent in this data set. Both these numbers are in agreement with the by-hand solution. That doesn't prove they are correct, as both calculations may have made the same error, but it increases our confidence.    
+
+Oops, I nearly forgot we were asked to construct a matrix of joint probabilities. Here it is, and you will notice that it agrees with our earlier by-hand calculation in solution 1:    
+
+```{r collapse=FALSE}
+joint <- cbind(pFandG01, pFandG06, pFandG11)
+colnames(joint) <- c("g1", "g6", "g11")
+kable(joint, caption="**Table 4.6.** The joint distribution of food preference and grade level.")
+```  
+
+## Solution 3   
+Apart from the comments, this solution is easily the shortest, and perhaps also the clearest. I suppose it uses names in the way the makers of R intended because the names seem to be preserved in products. By inputting the matrix of conditional probabilities $\Pr(F|G)$ with food as the row index and grade as the column index the subsequent calculations seemed more natural to me.   
+
+```{r}
+Food  <- c("ic", "fr", "ff" )      # food  names
+Grade <- c("g1", "g6", "g11")      # grade names
+
+pFgG <- matrix(c(0.3, 0.6, 0.1,    # Pr(Food given Grade)
+                 0.6, 0.3, 0.1,
+                 0.3, 0.1, 0.6),  nrow=3, byrow=FALSE,
+               dimnames=list(Food=Food, Grade=Grade))
+
+pG <- c(g1=0.2, g6=0.2, g11=0.6)  # Pr(Grade)
+
+pFaG <- pFgG                      # Pr(Food, Grade)
+for (f in Food) pFaG[f,] <- pFgG[f,]*pG
+
+pF <- rowSums(pFaG)               # Pr(Food)
+
+pFxpG <- pF %o% pG                # Pr(Food) x Pr(Grade)
+
+## too many tables 
+kable(pF   , caption="**Table 4.6A.** The marginal distribution of food 
+                     preference.")
+kable(pG   , caption="**Table 4.6B.** The marginal distribution of grade 
+                     level.")
+kable(pFaG , caption="**Table 4.6C.** The joint distribution of food 
+                     preference and grade level.")
+kable(pFxpG, caption="**Table 4.6D.** The product of the marginal 
+                     distributions of food and grade level.")
+```  
+
+- Comparing Table 4.6C with Table 4.6D shows that $\Pr(F,G)\ne\Pr(F)\Pr(G)$ for every combination of food preference and grade level. Clearly food preference and grade level are not independent.  
+
+- With regard to the statement `pFxpG <- pF %o% pG`, the product of the marginals, it is interesting (but entirely natural, when you think of it) that the outer product of two named vectors makes the left-side argument into a column and the right-side argument into a row so that the resulting matrix takes its rownames from the left side argument and its column names from the right side argument.
+
+# Et cetera department  
+If you have a question, or a suggestion for class, tell me here.
+
