@@ -1,0 +1,192 @@
+---
+title: "A5"
+author: "Mary Smith"
+date: "2020-02-14"
+output: 
+  html_document: 
+    code_folding: hide
+    theme: cerulean
+    toc: true
+    smooth_scroll: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: false
+---
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 13px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.math{ font-size: 10pt;}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px;
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px;
+}
+pre{/*preformatted text*/ 
+    font-size: 12px;
+}
+p.caption {/* figure captions */ 
+    font-size: 0.9em;
+    font-style: italic; 
+} 
+</style>
+
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+library(knitr)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  ",
+               collapse=TRUE, 
+               #echo=FALSE,
+               fig.asp=1/gr,
+               dev="png"
+               )
+options(digits=3)
+```  
+
+# Introduction  
+This assignment is based mostly on Chapter 5 of our text. Ex 5.1.1-4 treats a dichotomous classifier problem (Is it A, or is it not?). Ex 5.6 is a warmup for the Gibbs Sampler.  
+
+# Fun fact  
+R Markdown isn't limited to the R engine. The following code engines can be used by putting their name where you usually put the `r` in the chunk header: `r names(knitr::knit_engines$get())`. [GNU Octave](https://www.gnu.org/software/octave/) is a freeware version of `Matlab`. [Go](https://en.wikipedia.org/wiki/Go_(programming_language)), designed at Google, is a faster, safer version of `C` with some features of `C++`. [Julia](https://en.wikipedia.org/wiki/Julia_(programming_language)) is a recently developed high-performance language for numerical analysis. The [Rcpp package](https://www.tandfonline.com/doi/abs/10.1080/00031305.2017.1375990?journalCode=utas20) offers "a seamless integration of R and C++."  
+
+# Ex 5.0  
+(not in text) (10 points)   
+List the technical terms you encountered in this chapter, with a '?' to indicate those you have not encountered before. Look up at least **two** of the terms that are new to you, and give definitions that makes sense to you. Give the definitions as numbered footnotes---see the [R Markdown 
+Cheat Sheet](https://rstudio.com/wp-content/uploads/2016/03/rmarkdown-cheatsheet-2.0.pdf) or [R Markdown Reference Guide](https://rstudio.com/wp-content/uploads/2015/03/rmarkdown-reference.pdf).  
+
+# Solution 5.0  
+(Put your list of terms here.)  
+
+# Exercise 5.05  
+(not in text, 10 points)
+This exercise is a preparation for Exercise 5.1.  
+
+## Ex 5.05(a)  
+Read the Wikipedia entry for [prosecutor's fallacy](https://en.wikipedia.org/wiki/Prosecutor%27s_fallacy). Would you have sided with the prosecutor in the Sally Clark case (be honest)? Does this entry increase your estimation of the importance of Bayesian thinking in basic problems such as Exercise 5.1 (page 118) in our textbook? Give a concise mnemonic formula for the prosecutors fallacy in the form Pr(a|b)=Pr(b|a).  
+
+## Solution 5.0.5(a)    
+(Put your narrative here.)   
+
+## Ex 5.0.5(b)  
+Glance at the Wikipedia entry for [Sensitivity and specificity](https://en.wikipedia.org/wiki/Sensitivity_and_specificity), and page 103 of our text, then group the following terms into exactly four classes, such that the terms in each class have the same meaning: specificity, fall-out, true negative rate, sensitivity, false alarm rate, true positive rate, false alarm rate, hit rate, false negative rate, false positive rate. It is not necessary to name the classes; just group the terms.
+
+## Solution 5.0.5(b)  
+(Put your narrative here.)  
+
+# Ex 5.1.1  
+(Based loosely on Ex 5.1 of our text, page 118) (15 points)  
+
+## Preamble  
+
+The nomenclature of testing can be confusing, so when confronted with a problem of this type it is good to seek help from the sum rule. Using + and - to denote positive and negative test results, and D (for diseased) and H (for healthy) to denote the absence and presence of disease, we use the sum rule to write:
+
+    Pr(+|H) + Pr(-|H) = 1. In other words, fpr + tnr = 1.
+    Pr(+|D) + Pr(-|D) = 1. In other words, tpr + fnr = 1. 
+
+The true positive rate (tpr) is often called the _sensitivity_ and the true negative rate (tnr) is often called the _specificity_, but we will use tpr and tnr.  
+
+## The task  
+
+a. Write a function `ppD(tr, tpr, fpr, prior)` that computes the posterior probability of disease given:  
+
++ `tr`, the test result (1 if the test indicates disease is present, 0 if not), 
++ `tpr`, the true positive rate (sensitivity),  
++ `fpr`, the false positive rate (1 minus the specificity)   
++ `prior`, the prior probability of disease.
+
+  Give `tr` a default value of 1.  
+
+b. Use your function to solve the disease problem on page 103 of our text. That is, use your function to calculate the probability of disease given a positive test result for a test with true positive rate 99%, false positive rate 5% and prior probability 0.1%. Put your answer in a sentence of narrative using inline code.   
+
+# Solution 5.1.1  
+(Put your chunk and narrative paragraph here.)  
+
+# Ex 5.1.2    
+(a continuation of the previous problem) (5 points)  
+Use your function from the previous exercise to compute the probability of disease if the patient is tested twice, once with a positive result and once with a negative result. Give your answer as a sentence of narrative using inline code. **Hint:** Use the posterior from the previous exercise as your prior for this one.  
+
+# Solution 5.1.2  
+(Put your chunk and sentence of narrative here.)  
+
+# Ex 5.1.3  
+(case of multiple tests of different types) (10 points)  
+Generalize your `ppD()` to a function `ppDm()` that handles multiple tests in a single call. For `ppDm()` the arguments `tr`, `tpr` and `fpr` will usually be vectors of the same length, but write it to cover the case of multiple identical tests where `tr` has length greater than 1 but `tpr` and `fpr` have length 1. Use your `ppDm()` to find the posterior probability of disease when five tests are given. Use the following prior, test results, and test characteristics.  
+
+    prior = 9.4/100 (the U.S. prevalence of diabetes)
+    tr  = c( 1,  0,  1,  1,  1)
+    tpr = c(99, 85, 93, 92, 75)/100 
+    fpr = c( 5, 15, 10, 12, 18)/100
+
+Display these data in a table using `knitr::kable()` with an appropriate caption that starts with **Table 5.1.3.**  (I used a line of inline code to do this.)  
+
+# Solution 5.1.3 
+(Put your chunk, table and narrative here.)  
+
+
+# Ex 5.1.4  
+Use your function `ppDm()` to check your result in Ex 5.1.1 (single test with positive result) and Ex 5.1.2 (repeated test with one positive and one negative result).  
+
+# Solution 5.1.4  
+(Put your chunks and narrative paragraphs here.)  
+
+# Ex 5.4  
+(based loosely on Ex 5.4, on page 120 of our text) (15 points)  
+Write a chunk that makes a 3 by 2 matrix of plots in the style of Figures 5.1-3 in our text. In the left column, use a vague prior and an informative Bernoulli likelihood (`Z=10`, `N=40`); in the right column use an informative prior and a vague Bernoulli likelihood (`Z=1`, `N=4`). Don't bother putting the HDIs on the plots. Use Kruschke's `BernGridExample.R` and `BernGrid.R` for inspiration, but do not `source()` any of his scripts.  
+
+## Suggestions    
+
+1. Use $\theta$ in your axis labels but save typing by using `x` instead of `theta` in your code.  
+
+2. Use Kruschke's "triangle" function `y <- pmin(x,1-x)^a` or R's `dbeta(x,shape1,shape2)` for your priors.  
+
+3. Scale your likelihood by using `y <- 0.45*y/max(y)`.  
+
+4. Scale your prior and posterior by using either `y <- y/sum(y)` (the [Dirac comb](https://en.wikipedia.org/wiki/Dirac_comb) approximation used by Kruschke) or `y <- y/trap(x,y)` (the piecewise linear approximation) where `trap()` is a function that returns the integral of `y` over its whole domain, calculated by the [trapezoidal-rule](https://en.wikipedia.org/wiki/Trapezoidal_rule):  
+
+```
+trap <- function(x,y)  # integral of y from x[1] to x[length(x)]  
+          sum( diff(x)*0.5*( y[-1] + y[-length(y)] ) )  
+```
+
+# Solution 5.4  
+(Put your chunk here.)  
+
+# Ex 5.5  
+(not in text) (10 points)  
+
+This problem will give you a bit of practise using samples, something we spoke of in our first few meetings: (a) Use `rbeta()` to generate 2,000 samples of $\theta$ from the beta distribution with shape parameters `a=2` and `b=3`; use `set.seed(123)` in your chunk to ensure that we all use the same set of pseudo-random numbers and thus get the same answer. (b) Use your samples to calculate $\Pr(\theta < 0.75\, \vert\, \theta > 0.5)$. (c) Check your result using `pbeta()`. Give your answers in narrative using inline code.   
+
+# Solution 5.5  
+(Put your chunk and narrative paragraph here.)  
+
+# Ex 5.6  
+
+(Not in text) (15 points)  
+In order to code a Gibbs sampler (GS) you must be able to make any positive 1-D function into a PDF and sample from it. (As you will learn in class, and in Chapter 7 of our text, the Gibbs sampler works by taking a draw from each parameter, holding the other parameters temporarily fixed. The multidimensional posterior thus become a 1-D function of the parameter currently being "visited".) This exercise is an introduction to GS coding.  
+
+Suppose the `(d,p,q,r)beta` quartet of functions is not supplied by R and you have to write your own. This exercise is to write `dmb()`, your own version of `dbeta()`. Think "d-my-beta". In the next assignment, we'll complete the quartet by writing `pmb()`, `qmb()` and `rmb()`.   
+
+Write `dmb(x, a=1, b=1, Ni=301)` which makes $f(\theta,a,b)=\theta^{a-1}(1-\theta)^{b-1}$ into a PDF using `Ni` points to compute the integral. Give a partial check of your work by graphing `dmb(x,a=2,b=4,N=201)` against `dbeta(x, shape1=2, shape2=4)` for `x <- seq(0,1,len=101)`, fitting a line with `lm()` and making a histogram of the residuals. Put the two plots side by side in the same figure with the histogram in the right panel.   
+
+**Hints:** A PDF has to integrate to 1, so divide $f(\theta,a,b)$ by its integral from 0 to 1 to make it a PDF. You can use `integrate()` if you like, but remember that in MCMC you might call this function 100,000 times; for greater speed you might consider using the trapezoidal rule: `sum( diff(xi)*0.5*(fi[-1] + fi[-Ni]) )`, in which `Ni` is the number of points used to compute `xi` and `fi`; do not confuse the `xi` with the `dmb()` argument `x`. In the left panel of your figure use `xlab=bquote("dbeta("*a==.(a)*","~b==.(b)*")")` and `ylab=bquote("dmb("*a==.(a)*","~b==.(b)*")")`.    
+
+## Solution 5.6  
+(Put your chunks and narrative here. For clarity I made the function in one chunk and then used it in a second chunk.)  
+
+
