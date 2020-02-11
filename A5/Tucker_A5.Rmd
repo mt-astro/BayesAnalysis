@@ -1,6 +1,6 @@
 ---
-title: "A5"
-author: "Mary Smith"
+title: "Tucker_A5"
+author: "Michael Tucker"
 date: "2020-02-14"
 output: 
   html_document: 
@@ -116,6 +116,13 @@ b. Use your function to solve the disease problem on page 103 of our text. That 
 
 # Solution 5.1.1  
 (Put your chunk and narrative paragraph here.)  
+
+```{r sol5.1.1}
+
+ppD = function(tr, tpr, fpr, prior) {
+  
+}
+```
 
 # Ex 5.1.2    
 (a continuation of the previous problem) (5 points)  
