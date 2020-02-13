@@ -225,13 +225,14 @@ values = c('9', '10', 'J', 'Q', 'K', 'A')
 Ncopy = 2
 
 cards = list()
+cards = vector(mode='list', length = Ncard)
 counter = 0
 for (suit in suits){
   for (value in values){
     for (i in range(0, Ncopy)){
       # neither option seems to work
-      cards = append(cards, list("s"=suit, "v"=value))
-#      cards[counter] = list("s"=suit, "v"=value)
+     # cards = append(cards, list("s"=suit, "v"=value))
+      cards[[counter]] = list("s"=suit, "v"=value)
 #      counter = counter + 1
     }
   }

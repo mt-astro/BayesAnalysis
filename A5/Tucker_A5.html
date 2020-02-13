@@ -1689,6 +1689,27 @@ Pr(+|D) + Pr(-|D) = 1. In other words, tpr + fnr = 1. </code></pre>
 <div id="solution-5.1.1" class="section level1">
 <h1>Solution 5.1.1</h1>
 <p>(Put your chunk and narrative paragraph here.)</p>
+<pre class="r"><code>ppD = function(tr, tpr, fpr, prior) {
+  # adpated from DBDA pg 104
+  #calculate marginal probs
+  posTest = tpr*prior + fpr*(1-prior)
+  negTest = (1-tpr)*prior + (1-fpr)*(1-prior)
+  if (tr == 1){
+    # test is pos
+    post = tpr*prior / posTest
+  }
+  else {
+    # test is neg
+    post = fpr*prior/negTest
+  }
+  return(post)
+}
+
+#given values
+tpr = 0.99
+fpr = 0.05
+prior = 0.001</code></pre>
+<p>Assuming Joe Schmo (randomly) comes into the Queen’s Urgent Care and wants to be tested for <em>RareDisease120783D</em>. The test comes back positives, should Joe Schmo be worried and/or committed to the local CDC quarantine facility? The test itself has a true positive rate 0.99, false positive rate of 0.05, and only 0.001 fraction of the population has <em>RareDisease120783D</em>. With these values in-hand, we can determine the updated <em>posterior</em> probability that Joe Schmo does in fact have <em>RareDisease120783D</em>: 1.94%. So, still not much to be concerned about.</p>
 </div>
 <div id="ex-5.1.2" class="section level1">
 <h1>Ex 5.1.2</h1>
@@ -1698,6 +1719,35 @@ Use your function from the previous exercise to compute the probability of disea
 <div id="solution-5.1.2" class="section level1">
 <h1>Solution 5.1.2</h1>
 <p>(Put your chunk and sentence of narrative here.)</p>
+<pre class="r"><code>
+#assume first test is positive, if first test is neg prob not testing twice
+first_test = ppD(1, 0.99, 0.05, 0.001)
+second_test = ppD(0, 0.99, 0.05, first_test)</code></pre>
+<pre class="r"><code>#actually write a function to wrap both
+composite_ppD = function(tr1, tr2, tpr=0.99, fpr=0.05, prior=0.001){
+  first_result = ppD(tr1, tpr, fpr, prior)
+  second_result = ppD(tr2, tpr, fpr, first_result)
+  return(second_result)
+}
+
+# just having fun with dataframes
+df = data.frame('test1'=c(0,0,1,1), 'test2'=c(0,1,0,1))
+
+# didnt work
+#df$results = apply(df, c(1,2), composite_ppD)
+results = vector(length = 4)
+
+# not sure how to iterate through a double list, this can be done in python like:
+#result = [function(a,b) for a,b in zip(list_a, list_b)]
+# but brute force works as well
+
+for (i in c(0,1,2,3)){
+  results[i] = composite_ppD(df$test1[i], df$test2[i])
+}
+#df$results=results
+
+print(df)</code></pre>
+<p>I actually think this is really interesting, so I made a whole table considering the possible outcomes for different results between first and second tests. For the requested answer (first test positive, second test negative), the final probability that Jow Schmo has <em>RareDisease120783D</em> is 0.104%. The table itself:</p>
 </div>
 <div id="ex-5.1.3" class="section level1">
 <h1>Ex 5.1.3</h1>
