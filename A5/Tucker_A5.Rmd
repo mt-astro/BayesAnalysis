@@ -178,15 +178,15 @@ results = vector(length = 4)
 #result = [function(a,b) for a,b in zip(list_a, list_b)]
 # but brute force works as well
 
-for (i in c(0,1,2,3)){
-  results[i] = composite_ppD(df$test1[i], df$test2[i])
+for (i in c(1,2,3,4)){
+  results[[i]] = composite_ppD(df$test1[i], df$test2[i])*100.
 }
-#df$results=results
+df$results=results
 
 print(df)
 ```
 
-I actually think this is really interesting, so I made a whole table considering the possible outcomes for different results between first and second tests. For the requested answer (first test positive, second test negative), the final probability that Jow Schmo has _RareDisease120783D_ is `r round(second_test*100., 3)`%. The table itself:
+Joe Schmo tested positive the first time, so we want a second test to confirm. Since the first test was in fact positive, this is our updated prior for the second test, as the 0.1% prior no longer applies to Joe Schmo (as he is no longer random). The second test comes back negative, but we have to also consider the non-zero false negative rate. Therefore, the final probability that Jow Schmo has _RareDisease120783D_ is `r round(second_test*100., 3)`%, a low probability indeed. 
 
 
 # Ex 5.1.3  
@@ -201,16 +201,76 @@ Generalize your `ppD()` to a function `ppDm()` that handles multiple tests in a 
 Display these data in a table using `knitr::kable()` with an appropriate caption that starts with **Table 5.1.3.**  (I used a line of inline code to do this.)  
 
 # Solution 5.1.3 
-(Put your chunk, table and narrative here.)
+
+
+```{r sol5.1.3}
+#still not comfortable with how r handles and accesses arrays,
+#so the following code is a wee bit ugly, brute-forced the array
+#iteration
+
+
+###### 
+# took me wayyy too long to realize the error in my previous 
+# hw assignments is b/c r used 1-based indexing instead of 
+# 0-based
+######
+
+ppDm = function(tr, tpr, fpr, prior){
+  p = prior
+  if ( (length(tr) == length(tpr)) && ( length(tr)== length(fpr)) ){
+    for (i in 1:length(tr)){
+      p = ppD(tr[i], tpr[i], fpr[i], p)
+    }
+  }
+  else if (length(tr) > 1){
+    for (i in 1:length(tr)){
+      p = ppD(tr[i], tpr, fpr, p)
+    }
+  }
+  else {
+    p = ppD(tr, tpr, fpr, prior)
+  }
+  return(p)
+}
+
+#first case
+tr1 = c(1,0,1,1,1)
+tpr1 = c(99,85,93,92,75)/100.
+fpr1 = c(5,15,10,12,18)/100.
+prior = 9.4/100.
+post1 = ppDm(tr1, tpr1, fpr1, prior)
+
+#second case
+# just made up some numbers
+tr2 = c(1,0,1,1,1)
+tpr2 = 0.85
+fpr2 = 0.25
+post2 = ppDm(tr2, tpr2, fpr2, prior)
 
 
 
+```
+
+
+For the first case (multiple tests each with different `tpr` and `fpr` rates), we find the final probability is `r round(post1*100., 3)`% for the values given above and for the second case (single test with mutiple iterations) is `r round(post2*100., 3)`%.
+
+(didnt have time to make a pretty table, sorry)
 
 # Ex 5.1.4  
 Use your function `ppDm()` to check your result in Ex 5.1.1 (single test with positive result) and Ex 5.1.2 (repeated test with one positive and one negative result).  
 
 # Solution 5.1.4  
-(Put your chunks and narrative paragraphs here.)  
+
+
+```{r sol5.1.4}
+
+check1 = ppDm(1, 0.99, 0.05, 0.001)
+check2 = ppDm(c(1,0), 0.99, 0.05, 0.001)
+
+```
+
+Just to check our code, we find that `ppDm` returns `r round(check1*100, 3)`% for the single positive case and `ppDm` returns `r round(check2*100., 3)`% for the pos->neg case. 
+
 
 # Ex 5.4  
 (based loosely on Ex 5.4, on page 120 of our text) (15 points)  
@@ -241,6 +301,36 @@ This problem will give you a bit of practise using samples, something we spoke o
 
 # Solution 5.5  
 (Put your chunk and narrative paragraph here.)  
+
+```{r sol5.5}
+
+# a) make samples
+set.seed(123)
+Nsample = 2000
+a = 2
+b = 3
+samples = rbeta(Nsample, a, b)
+hist(samples, 25,plot=TRUE)
+
+
+#b) find samples between 0.5 and 0.75
+idx0 = samples > 0.5
+idx1 = samples > 0.5 & samples < 0.75
+frac = sum(idx1) / sum(idx0)
+
+#c) check against pbeta
+
+# i think pbeta returns cdf up until x
+# via bayes rule, P(A|B) = P(B|A)*P(A)/P(B)
+# P(B|A) = P(theta > 0.5 | theta < 0.75) = pbeta(0.75,a,b) - pbeta(0.5,a,b)
+cdf5 = 1.0 - pbeta(0.5, a, b) / pbeta(0.75, a, b)
+print(cdf5)
+# P(A) = P(theta > 0.5) = 1.0 - P(theta < 0.5) = 1-
+# P(B) = P(theta < 0.75) = pbeta(0.75, a, b)
+
+
+
+```
 
 # Ex 5.6  
 
