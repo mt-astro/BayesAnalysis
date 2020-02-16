@@ -71,7 +71,9 @@ List the technical terms you encountered in this chapter, with a '?' to indicate
 Cheat Sheet](https://rstudio.com/wp-content/uploads/2016/03/rmarkdown-cheatsheet-2.0.pdf) or [R Markdown Reference Guide](https://rstudio.com/wp-content/uploads/2015/03/rmarkdown-reference.pdf).  
 
 # Solution 5.0  
-(Put your list of terms here.)  
+
+* **conjugate prior**^[I don't fully understand this, a conjugate prior is said to be prior and posterior distributions that come from the same _family_ but I'm not sure what that means. Continuous vs. discreet maybe?]
+* **joint parameter space**^[The parameter space allowed by two correlated variables]
 
 # Exercise 5.05  
 (not in text, 10 points)
@@ -87,7 +89,21 @@ Read the Wikipedia entry for [prosecutor's fallacy](https://en.wikipedia.org/wik
 Glance at the Wikipedia entry for [Sensitivity and specificity](https://en.wikipedia.org/wiki/Sensitivity_and_specificity), and page 103 of our text, then group the following terms into exactly four classes, such that the terms in each class have the same meaning: specificity, fall-out, true negative rate, sensitivity, false alarm rate, true positive rate, false alarm rate, hit rate, false negative rate, false positive rate. It is not necessary to name the classes; just group the terms.
 
 ## Solution 5.0.5(b)  
-(Put your narrative here.)  
+
+* Class 1:  
+  + sensitivity
+  + true positive rate
+  + hit rate
+* Class 2:  
+  + specificity
+  + true negative rate
+* Class 3:  
+  + false positive rate
+  + fall-out
+  + false alarm rate
+* Class 4:  
+  + false negative rate
+
 
 # Ex 5.1.1  
 (Based loosely on Ex 5.1 of our text, page 118) (15 points)  
@@ -115,7 +131,6 @@ a. Write a function `ppD(tr, tpr, fpr, prior)` that computes the posterior proba
 b. Use your function to solve the disease problem on page 103 of our text. That is, use your function to calculate the probability of disease given a positive test result for a test with true positive rate 99%, false positive rate 5% and prior probability 0.1%. Put your answer in a sentence of narrative using inline code.   
 
 # Solution 5.1.1  
-(Put your chunk and narrative paragraph here.)  
 
 ```{r sol5.1.1, collapse=FALSE}
 
@@ -149,7 +164,6 @@ Assuming Joe Schmo (randomly) comes into the Queen's Urgent Care and wants to be
 Use your function from the previous exercise to compute the probability of disease if the patient is tested twice, once with a positive result and once with a negative result. Give your answer as a sentence of narrative using inline code. **Hint:** Use the posterior from the previous exercise as your prior for this one.
 
 # Solution 5.1.2  
-(Put your chunk and sentence of narrative here.) 
 
 ```{r sol5.1.2}
 
@@ -254,7 +268,7 @@ post2 = ppDm(tr2, tpr2, fpr2, prior)
 
 For the first case (multiple tests each with different `tpr` and `fpr` rates), we find the final probability is `r round(post1*100., 3)`% for the values given above and for the second case (single test with mutiple iterations) is `r round(post2*100., 3)`%.
 
-(didnt have time to make a pretty table, sorry)
+(didnt have time to make a nice table, sorry)
 
 # Ex 5.1.4  
 Use your function `ppDm()` to check your result in Ex 5.1.1 (single test with positive result) and Ex 5.1.2 (repeated test with one positive and one negative result).  
@@ -292,7 +306,8 @@ trap <- function(x,y)  # integral of y from x[1] to x[length(x)]
 ```
 
 # Solution 5.4  
-(Put your chunk here.)  
+
+ran out of time, skipped
 
 # Ex 5.5  
 (not in text) (10 points)  
@@ -300,7 +315,6 @@ trap <- function(x,y)  # integral of y from x[1] to x[length(x)]
 This problem will give you a bit of practise using samples, something we spoke of in our first few meetings: (a) Use `rbeta()` to generate 2,000 samples of $\theta$ from the beta distribution with shape parameters `a=2` and `b=3`; use `set.seed(123)` in your chunk to ensure that we all use the same set of pseudo-random numbers and thus get the same answer. (b) Use your samples to calculate $\Pr(\theta < 0.75\, \vert\, \theta > 0.5)$. (c) Check your result using `pbeta()`. Give your answers in narrative using inline code.   
 
 # Solution 5.5  
-(Put your chunk and narrative paragraph here.)  
 
 ```{r sol5.5}
 
@@ -316,21 +330,27 @@ hist(samples, 25,plot=TRUE)
 #b) find samples between 0.5 and 0.75
 idx0 = samples > 0.5
 idx1 = samples > 0.5 & samples < 0.75
-frac = sum(idx1) / sum(idx0)
+frac1 = sum(idx1) / sum(idx0)
 
 #c) check against pbeta
 
 # i think pbeta returns cdf up until x
 # via bayes rule, P(A|B) = P(B|A)*P(A)/P(B)
 # P(B|A) = P(theta > 0.5 | theta < 0.75) = pbeta(0.75,a,b) - pbeta(0.5,a,b)
-cdf5 = 1.0 - pbeta(0.5, a, b) / pbeta(0.75, a, b)
-print(cdf5)
-# P(A) = P(theta > 0.5) = 1.0 - P(theta < 0.5) = 1-
+P_BA = 1.0 - ( pbeta(0.5, a, b) / pbeta(0.75, a, b) )
+
+# P(A) = P(theta > 0.5) = 1.0 - P(theta < 0.5)
+P_A = 1.0 - pbeta(0.5, a, b)
+
 # P(B) = P(theta < 0.75) = pbeta(0.75, a, b)
+P_B = pbeta(0.75, a, b)
 
-
+#put it all together
+P_AB = P_BA * P_B / P_A
 
 ```
+Looking at the histogram of sampled values, my value for $P(\theta<0.75|\theta>0.5) = $`r round(frac1, 3)` seems reasonable but trying to check against `pbeta` gives me a vlue of `r P_AB`... not sure where my error is.
+
 
 # Ex 5.6  
 
@@ -344,6 +364,35 @@ Write `dmb(x, a=1, b=1, Ni=301)` which makes $f(\theta,a,b)=\theta^{a-1}(1-\thet
 **Hints:** A PDF has to integrate to 1, so divide $f(\theta,a,b)$ by its integral from 0 to 1 to make it a PDF. You can use `integrate()` if you like, but remember that in MCMC you might call this function 100,000 times; for greater speed you might consider using the trapezoidal rule: `sum( diff(xi)*0.5*(fi[-1] + fi[-Ni]) )`, in which `Ni` is the number of points used to compute `xi` and `fi`; do not confuse the `xi` with the `dmb()` argument `x`. In the left panel of your figure use `xlab=bquote("dbeta("*a==.(a)*","~b==.(b)*")")` and `ylab=bquote("dmb("*a==.(a)*","~b==.(b)*")")`.    
 
 ## Solution 5.6  
-(Put your chunks and narrative here. For clarity I made the function in one chunk and then used it in a second chunk.)  
+
+```{r sol5.6part1}
+
+# not sure why you need Ni...
+
+trap <- function(x,y)  # integral of y from x[1] to x[length(x)]  
+          sum( diff(x)*0.5*( y[-1] + y[-length(y)] ) )  
 
 
+dmb = function(x, a=1,b=1,Ni=301) {
+  a0 = a-1
+  b0 = b-1
+  res = (x**a0) * ((1-x)**b0)
+  res = res / sum(res)
+  return(res)
+}
+
+x = seq(0, 1, by=0.01)
+a = 2
+b = 4
+
+myvals = dmb(x, a, b)
+rvals = dbeta(x, a, b)
+fit = lm(myvals ~ rvals)
+
+
+plot(rvals, myvals)
+hist(fit$residuals)
+```
+
+
+My version seems to work, but I dont use `Ni` at all... not sure what I'm missing...
