@@ -1,0 +1,183 @@
+---
+title: "A6"
+author: "Mary Smith"
+date: "2020-02-21"
+output: 
+  html_document: 
+    theme: cerulean
+    toc: true
+    smooth_scroll: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: false
+    code_folding: hide
+---
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 13px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.math{ font-size: 10pt;}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px;
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px;
+}
+pre{/*preformatted text*/ 
+    font-size: 12px;
+}
+p.caption {/* figure captions */ 
+    font-size: 0.9em;
+    font-style: italic; 
+} 
+</style>
+
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+library(knitr)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  ",
+               collapse=TRUE, 
+               #echo=FALSE,
+               fig.asp=1/gr,
+               dev="png",
+               fig.align="center"
+               )
+options(digits=3)
+source("sourceMe_A6.R")
+```  
+
+# Introduction   
+
+Chapter 6 introduces conjugate priors, using the Bernoulli-beta system as an example. In addition to being elegant, conjugate priors can be very useful in research problems. For example, the JAGS MCMC engine notices whether a prior is conjugate, and takes advantage of that to save computation. The savings in run time are significant.   
+
+This assignment requires Kruschke's `BernBeta()` and `HDIofICDF()`. I edited them into a script called `sourceMe_A6.R` which should be sourced in the setup chunk of your Rmd. Notice how Kruschke makes these scripts easy to edit by using tricks like coding `c(TRUE, FALSE)[1]` instead of `TRUE`, and `showCentTend=c("Mean","Mode","None")[3]` instead of `showCentTend="None"`. When he wants to edit, all he needs to change is a number, so typos are reduced.  
+
+Ex 6.6A-D complete the demonstration of how to create your own (d,p,q,r) quartet for almost any positive function. It will enable you to construct your own Gibbs sampler, a powerful and efficient MCMC engine. We are using the beta kernel as a function so we can check our work using `(d,p,q,r)beta()`.  
+
+# LaTeX resource  
+If you ever get stuck trying to make a LaTeX expression, try using the [online LaTeX editor](http://www.codecogs.com/latex/eqneditor.php).  
+
+# Ex. 6.01  
+(not in text) (10 points)   
+List the technical terms you encountered in this chapter, with a '?' after those you have not encountered before. Look up at least two of the terms that are new to you, and give definitions that makes sense to you.
+
+# Ex. 6.02  
+(not in text) (10 points)   
+Read Section 15.1.2 (pp. 421-423) of our text and answer the following questions. If a LaTeX formula is called for, use $x$ for an interval scale variable, $r$ for a ratio scale variable, and $\theta$ for a probability.  
+
+(a) Are map coordinates ratio-scale metric data or interval-scale metric data?
+
+(b) Are distances (from a known fixed point) ratio-scale metric data or interval-scale metric data?
+
+(c) Temperature (in degrees Centigrade or Celsius, not Kelvin) is a (what?)-scale quantity.
+
+(d) In the R language, a categorical variable is called a (what?). The possible values of the categorical variable are called (what?). Sorry, I don't think the answers to this question are in Section 15.1.2.  
+
+(e) The common mathematical function that transforms a ratio-scale metric variable to an interval-scale metric variable is (what?). The common mathematical function that transforms an interval-scale metric variable to a ratio-scale metric variable is (what?).  
+
+(f) From lectures (this is not in our text) the function that transforms a ratio scale variable to a probability variable is an instance of the (what?) function. Give the formula. When you make a probability variable into a ratio scale variable the ratio scale variable is called the (what?)  
+
+(g) Again from lectures: The name of the function that transforms a probability variable to an interval scale variable is (what?). Give the formula in LaTeX. The name of the function that transforms an interval scale variable to a probability is (what?). Give the formula in LaTeX.   
+
+# Ex. 6.1  
+(page 139 of our text) (10 points)  
+To save time use `BernBeta()` for this problem. You don't need to `source()` anything to create it because it was sourced in the setup chunk above. In parts A,B,C use `BernBeta()` to make a figure, and use the caption of the figure to give (i) the name of the and the formula for its kernel, (ii) the kernel of the likelihood, and (iii) the name of the posterior, and its kernel. Recall that the kernel of a PDF or likelihood is the part that depends on the parameters. For example, if the prior is a beta with shape parameters 11, and 5, its kernel is $\theta^{10}(1-\theta)^4$. Use narrative to make the captions. In part D just give the answer and explain it, using the fact that in each case the complete likelihood is the product of the same three Bernoulli likelihoods. (For a head the likelihood is $\Pr(H\vert\theta)=\theta$, and for a tail the likelihood is $\Pr(T\vert\theta)=1-\theta$.)    
+
+## Solution 6.1A  
+(Use `BernBeta()` to make a figure here, and use the caption of the figure to give the kernels of the prior, the likelihood and the posterior. For example, if the prior is a beta with shape parameters 11, and 5, the kernel of the prior is $\theta^{10}(1-\theta)^4$.)   
+
+## Solution 6.1B  
+(Do what it says in our text, using `BernBeta()` to make the figure. Don't forget the instruction above to give the name and kernel of the prior, the kernel of the likelihood, and the name and kernel of the posterior.)  
+
+## Solution 6.1C  
+(Do what it says in our text, using `BernBeta()` to make the figure. Don't forget the instruction above to give the name and kernel of the prior, the kernel of the likelihood, and the name and kernel of the posterior.)  
+
+## Solution 6.1D  
+(Don't bother to make the figure requested by our text. Just answer the question and explain your answer.)  
+
+# Ex. 6.2  
+(page 140) (5pts)  
+In part (A) when Kruschke says "prior belief" he means your prior belief about the preference of the general population.  
+
+## Solution 6.2A  
+Explain here why the Bayes-Laplace prior (the uniform beta with shape parameters $a=b=1$) is more appropriate for this problem than the Haldane prior. I doubt that Googling will help with this one. Then use `HDIofICDF()` to get the 95% HDI and give it in your narrative. Use `BernBeta()` to make a plot if you like, as a reality check, but it isn't strictly necessary.  
+
+## Solution 6.2B  
+Use `HDIofICDF()` again to update the 95% HDI and give your answer in narrative.  
+
+# Ex. 6.4  
+(page 141, 5 points)  
+The prior that Kruschke suggests you use (the upper left panel of the figure on page 128) is a proper approximation to the Haldane prior. You may use the true Haldane prior instead, if you like, because the five flips (4 heads and 1 tails) will result in a proper posterior. If you do the problem that way, plot the prior, the likelihood and the posterior on the same set of axes. Plot the posterior first as a red line (`lwd=2, col="red`), then the likelihood as a black line (`lwd=2`), and finally the prior as a thick dotted green line (`lwd=3, lty=3`). Give your plot a legend and a caption.     
+
+## Solution 6.4  
+(Put your figure and narrative here.)  
+
+# Ex 6.6  
+(Not in our text. This exercise is extra credit, meaning that scores are added to the numerator but not the denominator.)  
+
+In this exercise, which has four parts, we complete the "my-beta" quartet that we started in the last assignment with `dmb()`. You'll recall that the default number of vertices in the `dmb()` piecewise approximation for the beta PDF was 301, which is such a large number that the error in the approximation was difficult to see. Therefore in this set of exercises we'll approximate the beta distribution by a piecewise linear function with 51 points.   
+
+## Ex 6.6A  
+(10 points extra credit)  
+Write a function `pmb(q, a=1, b=1, Nj=51)` and compare it with `pbeta()` in the same way we compared `dmb()` to `dbeta()` last week. To code `pmb()` begin as you did with `dmb()` by calculating  $f(q)=q^{a-1}(1-q)^{b-1}$ on  
+`qj <- seq(0, 1, length.out=Nj)`.  
+Then do the integral using  
+`pj <- cumsum(diff(qj)*0.5*(fj[-1] + f[-Nj]))`  
+`pj <- c(0, pj)`  
+Then make the integral into a CDF by  
+`pj <- pj/pj[Nj]`  
+Then interpolate the given `q[i]` into the `qj[]` to get the desired probabilities `p[i]`.  
+
+## Solution 6.6A  
+(Put your chunk(s) and figure here.)  
+
+## Ex 6.6B  
+(10 points extra credit)  
+Write a function `qmb(p, a=1, b=1, Nj=51)` and compare it with `qbeta()` in the same way you compared `pmb()` to `pbeta()` above. Your code for `qmb()` will be much like your code for `pmb()` except that you interpolate the given `p[i]` to get the desired quantiles `q[i]`. As above, use `a=2` and `b=4`. 
+
+## Solution 6.6B  
+
+(Put your chunk(s) and figure here.)   
+
+
+## Ex 6.6C  
+(10 points extra credit)  
+Write a function `rmb(n, a=1, b=1, Nj=51)` and compare it with `rbeta(n, shape1, shape2)` for `a=2`, `b=4`. Your code will resemble that of `qmb(p, a=1, b=1, Nj=301)`, except that the vector of probabilities `p` is replaced by `n` draws from the uniform distribution on (0,1). (Hint: `p <- runif(n)`.) Compare your `rmb()` with `rbeta()` by drawing 1,000 samples from each function and plotting the quantiles of the `rmb()` _samples_ on the y-axis with the true quantiles from `rbeta()` samples on the x-axis. Add to the plot a red line from (0,0) to (0,1). The foregoing is the left panel of the figure. In the right panel, plot a histogram of the differences between the y- and x-values.        
+
+## Solution 6.6C  
+
+(Put your chunk(s) and figure here.)
+
+The tests above could be very thorough because we have the R-supplied functions `(d,p,q,r)beta()` to check our work. In the application to the Gibbs sampler this method of checking will not be available, but notice that the beta kernel $\theta^{a-1}(1-\theta)^{b-1}$ was a very minor part of our code(s). If the machinery works for one kernel then it should work for almost any kernel, provided we sample that kernel finely enough.  
+
+## Ex 6.6D  
+(10 points extra credit)  
+In this exercise you make a final test by taking 1,000 samples from `rmb()`, making a histogram of them and adding a red line plot of `dmb()` to the histogram. If our `rmb()` and `dmb()` are consistent, the red line should track the histogram.  
+
+## Solution 6.6D  
+
+(Put your chunk and figure here.)  
+
+## Remarks  
+
+Exercise 6.6 concludes our re-creation of the `(d,p,q,r)beta()` quartet. For the Gibbs sampler all we need is the machinery that we used in `rmb()`. However, there are occasions in data analysis, even outside of MCMC work, when you may need to make such a quartet for a function that is not supplied by the computer language. As you see, it is fairly straightforward. All you have to do is take a sample $u$ from the uniform distribution on (0,1)---every computer language has the equivalent of R's `runif()`---and interpolate to find $F^{-1}(u)$, where $F$ is your piecewise linear approximation to the CDF.    
+
+# Et cetera  
+If you have a question, or a suggestion for class, tell me here.
+
+
