@@ -70,7 +70,13 @@ BernBeta <- function( priorBetaAB, Data, plotType=c("Points","Bars")[2],
     # B(a,b) is Int_0^1 of theta^(a-1)(1-theta)^(b-1).
     exp( lbeta(z+a,N-z+b) - lbeta(a,b) )
   
-  ## Plot results.
+  #####
+  #added by me
+  if (plotType=="None") { return( c(a+z,b+N-z) ) }
+  #####
+  
+  
+    ## Plot results.
   layout( matrix( 1:3, nrow=3, ncol=1, byrow=FALSE ) ) # 3x1 panels
   par( mar=c(3,3,1,0),         # number of lines, each margin
        mgp=c(2,0.7,0),         # margin lines for title and axis

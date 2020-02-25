@@ -112,16 +112,43 @@ post = BernBeta(pBetaAB, data)
 From what I understand, the _kernel_ is just the function with constants left out. With that in mind, we have
 
 * (i) Beta distribution: $p(\gamma|\theta) = \theta^\gamma (1-\theta)^{1-\gamma} = \theta^H(1-\theta)^{N-H} = \theta^4(1-\theta)^3$ (essentially eq 6.2)
-* (ii) Likelihood function: same as (i), but now exponentials expressed as fractional quantities: 
+* (ii) Likelihood function: same as (i), but now exponentials expressed as fractional quantities:   $p(\gamma|\theta) = \theta^\gamma (1-\theta)^{1-\gamma} = \theta^{H/N}(1-\theta)^{1-H/N}=\theta^{4/7}(1-\theta)^{3/7}$
 
 ## Solution 6.1B  
 (Do what it says in our text, using `BernBeta()` to make the figure. Don't forget the instruction above to give the name and kernel of the prior, the kernel of the likelihood, and the name and kernel of the posterior.)  
 
+
+```{r sol6.1b}
+
+firstFlip = c(1)
+secondFlip=c(1)
+prior=c(4,4)
+
+#modified the BernBeta fcn to accept "None" plot arg to disable plotting
+post = BernBeta(prior, firstFlip, plot="None")
+post2 = BernBeta(post, secondFlip)
+
+```
+
 ## Solution 6.1C  
 (Do what it says in our text, using `BernBeta()` to make the figure. Don't forget the instruction above to give the name and kernel of the prior, the kernel of the likelihood, and the name and kernel of the posterior.)  
 
+```{r sol6.1c}
+
+#tired of recursive calls 
+flips=c(1,1,0)
+prior=c(4,4)
+post = BernBeta(prior, flips)
+
+```
+
 ## Solution 6.1D  
-(Don't bother to make the figure requested by our text. Just answer the question and explain your answer.)  
+(Don't bother to make the figure requested by our text. Just answer the question and explain your answer.)
+
+
+Yes, the posterior accepts the prior assumptions (here: 4H,HT), evaluates new information (here: 2H,1T) and then re-evaluates the original hypothesis (here, fair coin). I *think* in some cases order of information matters (I would be surpirsed if it *didn't*, at least for time-dependent variables) but in this case, the order of H and T is irrelevant. We do not think the fainess of the coin changes with *time*, therefore the ordering/timing of the evidence is not important. If we did think the order/timing of flip results mattered for our hypothesis (e.g., if each H result resulted in the coin being thinned or something ridiculous like that), then the ordering *would* matter. 
+
+(I did this off-hand based on my knowledge of posteriors, please point out any flaws in my logic, even if not directly applicable to this question)
 
 # Ex. 6.2  
 (page 140) (5pts)  
