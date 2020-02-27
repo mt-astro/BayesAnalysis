@@ -59,6 +59,16 @@ opts_chunk$set(comment="  ",
                )
 options(digits=3)
 source("sourceMe_A6.R")
+
+#added for colored text
+colorize <- function(x, color) {
+  if (knitr::is_latex_output()) {
+    sprintf("\\textcolor{%s}{%s}", color, x)
+  } else if (knitr::is_html_output()) {
+    sprintf("<span style='color: %s;'>%s</span>", color, 
+      x)
+  } else x
+}
 ```  
 
 # Introduction   
@@ -73,10 +83,17 @@ Ex 6.6A-D complete the demonstration of how to create your own (d,p,q,r) quartet
 If you ever get stuck trying to make a LaTeX expression, try using the [online LaTeX editor](http://www.codecogs.com/latex/eqneditor.php).  
 
 # Ex. 6.01  
+
+`r colorize("INCOMPLETE", "red")`
+
 (not in text) (10 points)   
 List the technical terms you encountered in this chapter, with a '?' after those you have not encountered before. Look up at least two of the terms that are new to you, and give definitions that makes sense to you.
 
+
 # Ex. 6.02  
+
+`r colorize("INCOMPLETE", "red")`
+
 (not in text) (10 points)   
 Read Section 15.1.2 (pp. 421-423) of our text and answer the following questions. If a LaTeX formula is called for, use $x$ for an interval scale variable, $r$ for a ratio scale variable, and $\theta$ for a probability.  
 
@@ -99,7 +116,12 @@ Read Section 15.1.2 (pp. 421-423) of our text and answer the following questions
 To save time use `BernBeta()` for this problem. You don't need to `source()` anything to create it because it was sourced in the setup chunk above. In parts A,B,C use `BernBeta()` to make a figure, and use the caption of the figure to give (i) the name of the and the formula for its kernel, (ii) the kernel of the likelihood, and (iii) the name of the posterior, and its kernel. Recall that the kernel of a PDF or likelihood is the part that depends on the parameters. For example, if the prior is a beta with shape parameters 11, and 5, its kernel is $\theta^{10}(1-\theta)^4$. Use narrative to make the captions. In part D just give the answer and explain it, using the fact that in each case the complete likelihood is the product of the same three Bernoulli likelihoods. (For a head the likelihood is $\Pr(H\vert\theta)=\theta$, and for a tail the likelihood is $\Pr(T\vert\theta)=1-\theta$.)    
 
 ## Solution 6.1A  
+
+`r colorize("PARTIALLY COMPLETE", "orange")`
+
 (Use `BernBeta()` to make a figure here, and use the caption of the figure to give the kernels of the prior, the likelihood and the posterior. For example, if the prior is a beta with shape parameters 11, and 5, the kernel of the prior is $\theta^{10}(1-\theta)^4$.)   
+
+
 
 ```{r sol6.1a}
 
@@ -109,12 +131,16 @@ post = BernBeta(pBetaAB, data)
 
 ```
 
+
 From what I understand, the _kernel_ is just the function with constants left out. With that in mind, we have
 
 * (i) Beta distribution: $p(\gamma|\theta) = \theta^\gamma (1-\theta)^{1-\gamma} = \theta^H(1-\theta)^{N-H} = \theta^4(1-\theta)^3$ (essentially eq 6.2)
 * (ii) Likelihood function: same as (i), but now exponentials expressed as fractional quantities:   $p(\gamma|\theta) = \theta^\gamma (1-\theta)^{1-\gamma} = \theta^{H/N}(1-\theta)^{1-H/N}=\theta^{4/7}(1-\theta)^{3/7}$
 
-## Solution 6.1B  
+## Solution 6.1B 
+
+`r colorize("PARTIALLY COMPLETE", "orange")`
+
 (Do what it says in our text, using `BernBeta()` to make the figure. Don't forget the instruction above to give the name and kernel of the prior, the kernel of the likelihood, and the name and kernel of the posterior.)  
 
 
@@ -131,6 +157,10 @@ post2 = BernBeta(post, secondFlip)
 ```
 
 ## Solution 6.1C  
+
+`r colorize("PARTIALLY COMPLETE", "orange")`
+
+
 (Do what it says in our text, using `BernBeta()` to make the figure. Don't forget the instruction above to give the name and kernel of the prior, the kernel of the likelihood, and the name and kernel of the posterior.)  
 
 ```{r sol6.1c}
@@ -143,10 +173,12 @@ post = BernBeta(prior, flips)
 ```
 
 ## Solution 6.1D  
-(Don't bother to make the figure requested by our text. Just answer the question and explain your answer.)
+(Don't bother to make the figure requested by our text. Just answer the question and explain your answer.)  
 
 
-Yes, the posterior accepts the prior assumptions (here: 4H,HT), evaluates new information (here: 2H,1T) and then re-evaluates the original hypothesis (here, fair coin). I *think* in some cases order of information matters (I would be surpirsed if it *didn't*, at least for time-dependent variables) but in this case, the order of H and T is irrelevant. We do not think the fainess of the coin changes with *time*, therefore the ordering/timing of the evidence is not important. If we did think the order/timing of flip results mattered for our hypothesis (e.g., if each H result resulted in the coin being thinned or something ridiculous like that), then the ordering *would* matter. 
+`r colorize("COMPLETE", "green")`
+
+Yes, the posterior accepts the prior assumptions (here: 4H,4T), evaluates new information (here: 2H,1T) and then re-evaluates the original hypothesis (here, fair coin). I *think* in some cases order of information matters (I would be surpirsed if it *didn't*, at least for time-dependent variables) but in this case, the order of H and T is irrelevant. We do not think the fainess of the coin changes with *time*, therefore the ordering/timing of the evidence is not important. If we did think the order/timing of flip results mattered for our hypothesis (e.g., if each H result resulted in the coin being thinned or something ridiculous like that), then the ordering *would* matter. 
 
 (I did this off-hand based on my knowledge of posteriors, please point out any flaws in my logic, even if not directly applicable to this question)
 
@@ -155,17 +187,94 @@ Yes, the posterior accepts the prior assumptions (here: 4H,HT), evaluates new in
 In part (A) when Kruschke says "prior belief" he means your prior belief about the preference of the general population.  
 
 ## Solution 6.2A  
+
+`r colorize("COMPLETE", "green")`
+
+
 Explain here why the Bayes-Laplace prior (the uniform beta with shape parameters $a=b=1$) is more appropriate for this problem than the Haldane prior. I doubt that Googling will help with this one. Then use `HDIofICDF()` to get the 95% HDI and give it in your narrative. Use `BernBeta()` to make a plot if you like, as a reality check, but it isn't strictly necessary.  
 
+```{r sol6.2A}
+
+# frac of each option, first round
+Nsample1 = 100
+N_A1 = 58
+N_B1 = Nsample1 - N_A1
+a1 = b1 = 1
+a2 = a1 + N_A1
+b2 = b1 + N_B1
+
+
+x = seq(0,1, by=0.001)
+prior1 = dbeta(x, a1, b1)
+likelihood1 = dbeta(x, a2, b2)
+post1 = prior1 * likelihood1
+
+HDIvec1 = HDIofICDF(qbeta, shape1=a2, shape2=b2)
+plot(x, post1)
+abline(v=HDIvec1)
+
+```
+
+
+The Bayes-Laplace prior $(a=b=1)$ is better suited for this application since we are told that we had uniform prior before the poll was released. For the Bayes-Lapace prior, each outcome is equally likely as any other outcome, hence the horizontal line in the textbook's fig of beta distributions. Alternative way of thinking: Bayes-Laplace prior is essentially a 2-person poll with 2 options, each person picking a spearate choice. The Haldane prior, from what I can tell, favors the _extremes_: the prior favors either 0 or 1, which I guess makes sense if our statistic of interest can be "very right" or "very wrong". Although, I am curious if this is applicable to circular functions such as sine waves, where 0/1 are essentially the same. 
+
+I _think_ this is just an extension of the heads/tails coin flip debate, except now we call the flips "people". Out of 100 people/flips, 58 landed heads. How does this affect our thoughts on the true distribution? After modifying the prior by our newly-acquired polling information, our updated 95% HDI spans `r HDIvec1[1]`-`r HDIvec1[2]`.
+
 ## Solution 6.2B  
+
+`r colorize("INCOMPLETE", "red")`
+
+
 Use `HDIofICDF()` again to update the 95% HDI and give your answer in narrative.  
+
+```{r sol6.2B}
+
+Nsample2 = 100
+N_A2 = 57
+N_B2 = Nsample2 - N_A2
+a3 = 1 + N_A2
+b3 = 1 + N_B2
+
+x = seq(0, 1, by=0.001)
+prior2 = dbeta(x, a2, b2)
+likelihood2 = dbeta(x, a3, b3)
+post2 = prior2 * likelihood2
+HDIvec2 = HDIofICDF(qbeta, shape1=a3, shape2=b3)
+plot(x, post2)
+abline(v=HDIvec2)
+```
+
+After a second intense round of polling, the numbers are in. Reporting live on MSNBC with Chris Mathews, we find the new 95% HDI for Candidate A's support spans `r HDIvec2[1]*100`-`r HDIvec2[2]*100`% of the populace.
+
+
+__Why did the 95% HDI
+
 
 # Ex. 6.4  
 (page 141, 5 points)  
 The prior that Kruschke suggests you use (the upper left panel of the figure on page 128) is a proper approximation to the Haldane prior. You may use the true Haldane prior instead, if you like, because the five flips (4 heads and 1 tails) will result in a proper posterior. If you do the problem that way, plot the prior, the likelihood and the posterior on the same set of axes. Plot the posterior first as a red line (`lwd=2, col="red`), then the likelihood as a black line (`lwd=2`), and finally the prior as a thick dotted green line (`lwd=3, lty=3`). Give your plot a legend and a caption.     
 
 ## Solution 6.4  
+
+`r colorize("INCOMPLETE", "red")`
+
+
 (Put your figure and narrative here.)  
+
+
+```{r sol6.4}
+
+#haldane prior
+a = 0
+b = 0
+
+x = seq(0, 1, by=0.01)
+q = pbeta(x, a, b)
+plot(x, q, "b")
+
+
+```
+
 
 # Ex 6.6  
 (Not in our text. This exercise is extra credit, meaning that scores are added to the numerator but not the denominator.)  
@@ -183,7 +292,11 @@ Then make the integral into a CDF by
 `pj <- pj/pj[Nj]`  
 Then interpolate the given `q[i]` into the `qj[]` to get the desired probabilities `p[i]`.  
 
-## Solution 6.6A  
+## Solution 6.6A 
+
+`r colorize("INCOMPLETE", "red")`
+
+
 (Put your chunk(s) and figure here.)  
 
 ## Ex 6.6B  
@@ -191,6 +304,8 @@ Then interpolate the given `q[i]` into the `qj[]` to get the desired probabiliti
 Write a function `qmb(p, a=1, b=1, Nj=51)` and compare it with `qbeta()` in the same way you compared `pmb()` to `pbeta()` above. Your code for `qmb()` will be much like your code for `pmb()` except that you interpolate the given `p[i]` to get the desired quantiles `q[i]`. As above, use `a=2` and `b=4`. 
 
 ## Solution 6.6B  
+
+`r colorize("INCOMPLETE", "red")`
 
 (Put your chunk(s) and figure here.)   
 
@@ -201,6 +316,9 @@ Write a function `rmb(n, a=1, b=1, Nj=51)` and compare it with `rbeta(n, shape1,
 
 ## Solution 6.6C  
 
+`r colorize("INCOMPLETE", "red")`
+
+
 (Put your chunk(s) and figure here.)
 
 The tests above could be very thorough because we have the R-supplied functions `(d,p,q,r)beta()` to check our work. In the application to the Gibbs sampler this method of checking will not be available, but notice that the beta kernel $\theta^{a-1}(1-\theta)^{b-1}$ was a very minor part of our code(s). If the machinery works for one kernel then it should work for almost any kernel, provided we sample that kernel finely enough.  
@@ -210,6 +328,9 @@ The tests above could be very thorough because we have the R-supplied functions 
 In this exercise you make a final test by taking 1,000 samples from `rmb()`, making a histogram of them and adding a red line plot of `dmb()` to the histogram. If our `rmb()` and `dmb()` are consistent, the red line should track the histogram.  
 
 ## Solution 6.6D  
+
+`r colorize("INCOMPLETE", "red")`
+
 
 (Put your chunk and figure here.)  
 

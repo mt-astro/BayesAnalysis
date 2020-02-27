@@ -1,0 +1,130 @@
+---
+title: "A7"
+author: "Mary Smith"
+date: "2020-03-06"
+output: 
+  html_document: 
+    theme: cerulean
+    toc: true
+    smooth_scroll: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: false
+    code_folding: hide
+---  
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 13px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.math{ font-size: 10pt;}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px;
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px;
+}
+pre{/*preformatted text*/ 
+    font-size: 12px;
+}
+p.caption {/* figure captions */ 
+    font-size: 1.0em;
+    font-style: italic; 
+} 
+</style>
+
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+library(knitr)
+library(coda)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  ",
+               eval.after="fig.cap",
+               collapse=TRUE, 
+               dev="png",
+               fig.width=7,
+               out.width="95%",
+               fig.asp=1/gr,
+               fig.align="center",
+               cache=TRUE,
+               autodep=TRUE
+               )
+source("sourceMe_A7.R")
+```  
+
+# Introduction  
+
+In Chapter 7 we move from basic Bayesian concepts to the foundations of Markov Chain Monte Carlo (MCMC). Pages 154—156 are optional but I hope you will study them anyway, as they are one of the most accessible treatments I have seen. In them Kruschke shows that the target PDF is an equilibrium point of the Metropolis procedure. His demonstration does _not_ show that it is a _stable_ equilibrium; in theory it could be an _unstable_ equilibrium point, like a ball perched on a mountain top, but in practice such problems are vanishingly rare.  
+
+**Note** that this assignment comes with a file `sourceMe_A7.R` containing Kruschke's `HDIofMCMC()`. The file is sourced in the setup chunk; just put it in the same folder as your A7. I am not asking you to understand how `HDIofMCMC()` works, but try to do so anyway; it's a useful function that you can apply to any set of samples.  
+
+# Tips for figures    
+Here are a couple of tricks I sometimes use when making plots. Neither is essential.   
+
+## Captions  
+To make a caption with inserted values, put `eval.after="fig.cap"` (notice the quotes) and `fig.cap=fig.cap` (notice the lack of quotes) in the chunk header, and then create `fig.cap` as a string at the end of the chunk using `paste()`. The alternative is to use the narrative to make your caption with inline code for the variable values. I often make `eval.after="fig.cap"` a default chunk option in my setup chunk.    
+
+## legend( )  
+To pack extra information into a legend, use its `title` argument. Create it using `paste()` or `paste0()`, and embed `\n` to make it multiline. When you play these kind of games, the box around the legend can cause trouble; to get rid of the box put `bty="n"` in your `legend()` call. Using `legend()` like this isn't especially pretty, but it is quicker to code than annotating with `text()`.      
+
+```{r experiments, eval=FALSE, include=FALSE}
+## Find a bimodal likelihood for this exercise
+f1 <- function(x) {
+  c1 <- 0.7
+  c2 <- 1 - c1
+  a1 <- 10
+  b1 <- 20
+  a2 <- 20
+  b2 <- 10
+  print(c(c1/beta(a1,b1), c2/beta(a2,b2)))
+  7*beta(a1,b1)*dbeta(x, a1, b1) + 3*beta(a2,b2)*dbeta(x, a2, b2)
+}
+plot(f1, xlim=c(0,1), ylab="f(x)")
+```   
+
+# Exercise 7.4  
+(Not in text) (25 points)  
+In this exercise you write a Metropolis algorithm to solve a 1-D problem that is slightly more realistic than the island-hopping politician considered in Section 7.2 of our text. (Using MCMC on any 1-D problem is like using a twelve pound hammer to kill a mosquito, but we overlook that here.) Suppose we have some [compositional data](https://en.wikipedia.org/wiki/Compositional_data) with just two possible components, A and B say, indexed by $\theta$. For example, if $\theta=0.9$ the mixture is 90% A and 10% B. Suppose our likelihood function is  
+
+$$
+L(\theta\,\vert D) \propto \tag{1}
+7\,\theta^9(1-\theta)^{19} + \ 3\,\theta^{19}(1-\theta)^9
+$$
+and our prior is the Haldane prior $\theta^{-1}(1-\theta)^{-1}$. (a) Use the Metropolis algorithm to generate 2,000 samples of $\theta$ from the posterior and (b) make a histogram. (c) Use `coda::effectiveSize()` to calculate the effective size of your 2,000 samples. For the proposal distribution use the normal with SD = 0.2. (d) Add the posterior PDF to your histogram as a red line. (f) Use your samples to estimate $\Pr(0.2 \le \theta \le 0.5)$. (g) Use your samples to estimate $\Pr(0.3 \le \theta \le 0.4 \, \big\vert\, 0.1 \le \theta \le 0.8)$.
+
+Don't forget to give your plot a legend and a caption. In lieu of a legend, you may annotate your plot roughly like Kruschke does in the panels of Figure 7.1, page 146.  
+
+# Solution 7.4  
+(Put your plot and narrative here.)  
+
+# Exercise 7.5  
+(Not in text) (25 points)  
+Do the same problem you did in Ex 7.4, but use the Gibbs sampler instead of the Metropolis algorithm. 
+
+# Solution 7.5  
+(Put your plot and narrative here.)  
+
+# Exercise 7.6  
+(Not in text) (25 points)
+
+## Preamble  
+The two-coin example of this chapter is somewhat artificial, because the two coins are _independent_. In this exercise we estimate the difference in bias between two coins using MCMC, but without resort to either Metropolis or the Gibbs sampler. As you saw in class, deriving a useful mathematical formula for the PDF of a difference $\theta_1-\theta_2$ is not an easy task. However, it is easy to _sample_ the difference, and then use those samples as a proxy for the PDF itself. 
+
+## The task  
+You have two coins that cannot communicate with each other. You flip the first one $N_1=50$ times obtaining $z_1=35$ heads. You flip the second coin $N_2=40$ times, obtaining $z_1=18$ heads. Generate 2,000 samples of the difference $\phi=\theta_1-\theta_2$ and use them to make a histogram. Estimate (a) the expected value of $\phi$, (b) the SD of $\phi$ and (c) a 95% HDI for $\phi$. (d) Use your samples to estimate $\Pr(-0.1 \lt \phi \lt 0.1)$. Annotate your plot with the sample mean and 95% HDI the way Kruschke does, or use `legend()`.    
+
+# Solution 7.6   
+(Put your plot and narrative here.)  
