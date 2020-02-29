@@ -142,7 +142,7 @@ From what I understand, the _kernel_ is just the function with constants left ou
 
 ## Solution 6.1B 
 
-`r colorize("PARTIALLY COMPLETE", "orange")`
+`r colorize("COMPLETE", "green")`
 
 (Do what it says in our text, using `BernBeta()` to make the figure. Don't forget the instruction above to give the name and kernel of the prior, the kernel of the likelihood, and the name and kernel of the posterior.)  
 
@@ -159,9 +159,15 @@ post2 = BernBeta(post, secondFlip)
 
 ```
 
+Same as 6.1A, we find:  
+
+* Prior: $p(\theta|a,b) = \theta^5(1-\theta)^4$ since flip 5 was H. 
+* Likelihood: $L = \theta^1(1-\theta)^0$ since we flipped once and landed H.
+* Posterior: $P=p\times L = \theta^6(1-\theta)^4$
+
 ## Solution 6.1C  
 
-`r colorize("PARTIALLY COMPLETE", "orange")`
+`r colorize("COMPLETE", "green")`
 
 
 (Do what it says in our text, using `BernBeta()` to make the figure. Don't forget the instruction above to give the name and kernel of the prior, the kernel of the likelihood, and the name and kernel of the posterior.)  
@@ -174,6 +180,12 @@ prior=c(4,4)
 post = BernBeta(prior, flips)
 
 ```
+
+And once last time:
+
+* Prior: $p(\theta|a,b) = \theta^6(1-\theta)^4$ from 6.2B
+* Likelihood: $L=\theta^0(1-\theta)^1$ since the flip was tails.
+* Posterior: $P=p\times L = \theta^6(1-\theta)^5$
 
 ## Solution 6.1D  
 (Don't bother to make the figure requested by our text. Just answer the question and explain your answer.)  
