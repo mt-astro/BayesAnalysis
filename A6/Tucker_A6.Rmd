@@ -1,6 +1,6 @@
 ---
 title: "A6"
-author: "Mary Smith"
+author: "Michael Tucker"
 date: "2020-02-21"
 output: 
   html_document: 
@@ -97,9 +97,11 @@ List the technical terms you encountered in this chapter, with a '?' after those
 (not in text) (10 points)   
 Read Section 15.1.2 (pp. 421-423) of our text and answer the following questions. If a LaTeX formula is called for, use $x$ for an interval scale variable, $r$ for a ratio scale variable, and $\theta$ for a probability.  
 
-(a) Are map coordinates ratio-scale metric data or interval-scale metric data?
+We know interval scale metrics require $ x\in [0,\infty)$, ratio scale metrics $r\in (-\infty, \infty)$, and $\theta\in[0,1]$. These constraints alone can answer most of the following questions without too much difficulty.
 
-(b) Are distances (from a known fixed point) ratio-scale metric data or interval-scale metric data?
+(a) Are map coordinates ratio-scale metric data or interval-scale metric data? Depends on the coordinate system used. Longitude, a value constrained to $l \in [0,360]^\circ$, is interval, but latitude, $b\in[-90,90]^\circ$, can be $<0$ and thus must be ratio-scale.
+
+(b) Are distances (from a known fixed point) ratio-scale metric data or interval-scale metric data? Again, a distance such that $d^2 = x^2 + y^2$ on any given coordinate grid, is inherently positive and is ratio-scale.
 
 (c) Temperature (in degrees Centigrade or Celsius, not Kelvin) is a (what?)-scale quantity.
 
@@ -218,11 +220,11 @@ abline(v=HDIvec1)
 
 The Bayes-Laplace prior $(a=b=1)$ is better suited for this application since we are told that we had uniform prior before the poll was released. For the Bayes-Lapace prior, each outcome is equally likely as any other outcome, hence the horizontal line in the textbook's fig of beta distributions. Alternative way of thinking: Bayes-Laplace prior is essentially a 2-person poll with 2 options, each person picking a spearate choice. The Haldane prior, from what I can tell, favors the _extremes_: the prior favors either 0 or 1, which I guess makes sense if our statistic of interest can be "very right" or "very wrong". Although, I am curious if this is applicable to circular functions such as sine waves, where 0/1 are essentially the same. 
 
-I _think_ this is just an extension of the heads/tails coin flip debate, except now we call the flips "people". Out of 100 people/flips, 58 landed heads. How does this affect our thoughts on the true distribution? After modifying the prior by our newly-acquired polling information, our updated 95% HDI spans `r HDIvec1[1]`-`r HDIvec1[2]`.
+I _think_ this is just an extension of the heads/tails coin flip debate, except now we call the flips "people". Out of 100 people/flips, 58 landed heads. How does this affect our thoughts on the true distribution? After modifying the prior by our newly-acquired polling information, our updated 95% HDI spans `r HDIvec1[1]`-`r HDIvec1[2]`, a width of `r (HDIvec1[2]-HDIvec1[1])*100.`%.
 
 ## Solution 6.2B  
 
-`r colorize("INCOMPLETE", "red")`
+`r colorize("COMPLETE", "green")`
 
 
 Use `HDIofICDF()` again to update the 95% HDI and give your answer in narrative.  
@@ -232,22 +234,17 @@ Use `HDIofICDF()` again to update the 95% HDI and give your answer in narrative.
 Nsample2 = 100
 N_A2 = 57
 N_B2 = Nsample2 - N_A2
-a3 = 1 + N_A2
-b3 = 1 + N_B2
 
 x = seq(0, 1, by=0.001)
 prior2 = dbeta(x, a2, b2)
-likelihood2 = dbeta(x, a3, b3)
+likelihood2 = dbeta(x, N_A2, N_B2)
 post2 = prior2 * likelihood2
-HDIvec2 = HDIofICDF(qbeta, shape1=a3, shape2=b3)
+HDIvec2 = HDIofICDF(qbeta, shape1=a2+N_A2, shape2=b2+N_B2)
 plot(x, post2)
 abline(v=HDIvec2)
 ```
 
-After a second intense round of polling, the numbers are in. Reporting live on MSNBC with Chris Mathews, we find the new 95% HDI for Candidate A's support spans `r HDIvec2[1]*100`-`r HDIvec2[2]*100`% of the populace.
-
-
-__Why did the 95% HDI
+After a second intense round of polling, the numbers are in. Reporting live on MSNBC with Chris Mathews, we find the new 95% HDI for Candidate A's support spans `r HDIvec2[1]*100`-`r HDIvec2[2]*100`% of the populace. This HDI width of `r (HDIvec2[2]-HDIvec2[1])*100.`% is narrower than we found for Ex. 6.2A which is expected since the polling results were very similar.  
 
 
 # Ex. 6.4  
@@ -256,27 +253,46 @@ The prior that Kruschke suggests you use (the upper left panel of the figure on 
 
 ## Solution 6.4  
 
-`r colorize("INCOMPLETE", "red")`
+`r colorize("COMPLETE", "green")`
 
 
 (Put your figure and narrative here.)  
 
 
-```{r sol6.4}
+```{r sol6.4, fig.cap="Fig. 6.4: Prior, likelihood, and posterior for our biased coin trial."}
 
 #haldane prior
-a = 0
-b = 0
+a = 0.01
+b = 0.01
 
-x = seq(0, 1, by=0.01)
-q = pbeta(x, a, b)
-plot(x, q, "b")
+H=4
+T=1
 
+
+x = seq(0., 1.0, by=0.01)
+prior = dbeta(x, a, b)
+likelihood = dbeta(x, a+H, b+T)
+post = prior*likelihood
+
+
+
+#failed to get matplot to work
+#matplot(c(x,x,x), c(post, likelihood, prior), "bbb", lty=c(3,3,3), lwd=c(2,2,3), xlab="p(x)", col=c("red", "black", "green"))
+
+
+plot(x, likelihood, "n", xlab="p(x)", ylab="relative probability")
+lines(x, post, "l", col="red", lwd=2)
+lines(x, likelihood, col="black", lwd=2)
+lines(x, prior, "l", col="green", lwd=3, lty=3)
+legend(0.2, 3.1,legend=c("Posterior", "Likelihood", "Prior"), col=c("red", "black", "green"), lty=1:3, cex=0.8)
 
 ```
 
 
 # Ex 6.6  
+
+`r colorize("skipped...", "red")`
+
 (Not in our text. This exercise is extra credit, meaning that scores are added to the numerator but not the denominator.)  
 
 In this exercise, which has four parts, we complete the "my-beta" quartet that we started in the last assignment with `dmb()`. You'll recall that the default number of vertices in the `dmb()` piecewise approximation for the beta PDF was 301, which is such a large number that the error in the approximation was difficult to see. Therefore in this set of exercises we'll approximate the beta distribution by a piecewise linear function with 51 points.   
