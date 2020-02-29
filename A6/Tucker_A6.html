@@ -1638,15 +1638,15 @@ List the technical terms you encountered in this chapter, with a ‘?’ after t
 </div>
 <div id="ex.-6.02" class="section level1">
 <h1>Ex. 6.02</h1>
-<p><span style="color: red;">INCOMPLETE</span></p>
+<p><span style="color: green;">COMPLETE</span></p>
 <p>(not in text) (10 points)<br />
 Read Section 15.1.2 (pp. 421-423) of our text and answer the following questions. If a LaTeX formula is called for, use <span class="math inline">\(x\)</span> for an interval scale variable, <span class="math inline">\(r\)</span> for a ratio scale variable, and <span class="math inline">\(\theta\)</span> for a probability.</p>
 <p>We know interval scale metrics require $ x$. These constraints alone can answer most of the following questions without too much difficulty.</p>
 <ol style="list-style-type: lower-alpha">
-<li><p>Are map coordinates ratio-scale metric data or interval-scale metric data?</p></li>
-<li><p>Are distances (from a known fixed point) ratio-scale metric data or interval-scale metric data?</p></li>
-<li><p>Temperature (in degrees Centigrade or Celsius, not Kelvin) is a (what?)-scale quantity.</p></li>
-<li><p>In the R language, a categorical variable is called a (what?). The possible values of the categorical variable are called (what?). Sorry, I don’t think the answers to this question are in Section 15.1.2.</p></li>
+<li><p>Are map coordinates ratio-scale metric data or interval-scale metric data? Depends on the coordinate system used. Longitude, a value constrained to <span class="math inline">\(l \in [0,360]^\circ\)</span>, is interval, but latitude, <span class="math inline">\(b\in[-90,90]^\circ\)</span>, can be <span class="math inline">\(&lt;0\)</span> and thus must be ratio-scale.</p></li>
+<li><p>Are distances (from a known fixed point) ratio-scale metric data or interval-scale metric data? Again, a distance <span class="math inline">\(d\)</span> such that <span class="math inline">\(d^2 = x^2 + y^2\)</span> on any given coordinate grid, is inherently positive and is ratio-scale.</p></li>
+<li><p>Temperature (in degrees Centigrade or Celsius, not Kelvin) is a (what?)-scale quantity. Any temperature not in Kelvin can be negative, and thus must be ratio-scale.</p></li>
+<li><p>In the R language, a categorical variable is called a (what?). The possible values of the categorical variable are called (what?). Sorry, I don’t think the answers to this question are in Section 15.1.2. Categorical variables (e.g., values limited to specific quantities such as “states in the U.S.”) are called <em>factors</em> in <code>r</code>.</p></li>
 <li><p>The common mathematical function that transforms a ratio-scale metric variable to an interval-scale metric variable is (what?). The common mathematical function that transforms an interval-scale metric variable to a ratio-scale metric variable is (what?).</p></li>
 <li><p>From lectures (this is not in our text) the function that transforms a ratio scale variable to a probability variable is an instance of the (what?) function. Give the formula. When you make a probability variable into a ratio scale variable the ratio scale variable is called the (what?)</p></li>
 <li><p>Again from lectures: The name of the function that transforms a probability variable to an interval scale variable is (what?). Give the formula in LaTeX. The name of the function that transforms an interval scale variable to a probability is (what?). Give the formula in LaTeX.</p></li>
@@ -1658,7 +1658,7 @@ Read Section 15.1.2 (pp. 421-423) of our text and answer the following question
 To save time use <code>BernBeta()</code> for this problem. You don’t need to <code>source()</code> anything to create it because it was sourced in the setup chunk above. In parts A,B,C use <code>BernBeta()</code> to make a figure, and use the caption of the figure to give (i) the name of the and the formula for its kernel, (ii) the kernel of the likelihood, and (iii) the name of the posterior, and its kernel. Recall that the kernel of a PDF or likelihood is the part that depends on the parameters. For example, if the prior is a beta with shape parameters 11, and 5, its kernel is <span class="math inline">\(\theta^{10}(1-\theta)^4\)</span>. Use narrative to make the captions. In part D just give the answer and explain it, using the fact that in each case the complete likelihood is the product of the same three Bernoulli likelihoods. (For a head the likelihood is <span class="math inline">\(\Pr(H\vert\theta)=\theta\)</span>, and for a tail the likelihood is <span class="math inline">\(\Pr(T\vert\theta)=1-\theta\)</span>.)</p>
 <div id="solution-6.1a" class="section level2">
 <h2>Solution 6.1A</h2>
-<p><span style="color: orange;">PARTIALLY COMPLETE</span></p>
+<p><span style="color: green;">COMPLETE</span></p>
 <p>(Use <code>BernBeta()</code> to make a figure here, and use the caption of the figure to give the kernels of the prior, the likelihood and the posterior. For example, if the prior is a beta with shape parameters 11, and 5, the kernel of the prior is <span class="math inline">\(\theta^{10}(1-\theta)^4\)</span>.)</p>
 <pre class="r"><code>
 pBetaAB = c(4,4)
@@ -1668,10 +1668,13 @@ post = BernBeta(pBetaAB, data)</code></pre>
 <p>From what I understand, the <em>kernel</em> is just the function with constants left out. With that in mind, we have</p>
 <ul>
 <li><ol style="list-style-type: lower-roman">
-<li>Beta distribution: <span class="math inline">\(p(\gamma|\theta) = \theta^\gamma (1-\theta)^{1-\gamma} = \theta^H(1-\theta)^{N-H} = \theta^4(1-\theta)^3\)</span> (essentially eq 6.2)</li>
+<li>prior Beta distribution <span class="math inline">\(p\)</span>: <span class="math inline">\(p(\theta|a,b) = \theta^a (1-\theta)^b = \theta^H(1-\theta)^{N-H} = \theta^4(1-\theta)^4\)</span> (essentially eq 6.2)</li>
 </ol></li>
 <li><ol start="2" style="list-style-type: lower-roman">
-<li>Likelihood function: same as (i), but now exponentials expressed as fractional quantities: <span class="math inline">\(p(\gamma|\theta) = \theta^\gamma (1-\theta)^{1-\gamma} = \theta^{H/N}(1-\theta)^{1-H/N}=\theta^{4/7}(1-\theta)^{3/7}\)</span></li>
+<li>Likelihood function <span class="math inline">\(L\)</span>: same as (i), but now with our new information: <span class="math inline">\(p(\theta|a,b) = \theta^a (1-\theta)^b = \theta^1(1-\theta)^0\)</span></li>
+</ol></li>
+<li><ol start="3" style="list-style-type: lower-roman">
+<li>Posterior <span class="math inline">\(P\)</span> is just likelihood <span class="math inline">\(\times\)</span> prior: <span class="math inline">\(P = L\times p = \theta^4 (1-\theta)^4 \times \theta^1(1-\theta)^0=\theta^5(1-\theta)^4\)</span></li>
 </ol></li>
 </ul>
 </div>

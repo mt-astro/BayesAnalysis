@@ -92,7 +92,7 @@ List the technical terms you encountered in this chapter, with a '?' after those
 
 # Ex. 6.02  
 
-`r colorize("INCOMPLETE", "red")`
+`r colorize("COMPLETE", "green")`
 
 (not in text) (10 points)   
 Read Section 15.1.2 (pp. 421-423) of our text and answer the following questions. If a LaTeX formula is called for, use $x$ for an interval scale variable, $r$ for a ratio scale variable, and $\theta$ for a probability.  
@@ -101,11 +101,11 @@ We know interval scale metrics require $ x\in [0,\infty)$, ratio scale metrics $
 
 (a) Are map coordinates ratio-scale metric data or interval-scale metric data? Depends on the coordinate system used. Longitude, a value constrained to $l \in [0,360]^\circ$, is interval, but latitude, $b\in[-90,90]^\circ$, can be $<0$ and thus must be ratio-scale.
 
-(b) Are distances (from a known fixed point) ratio-scale metric data or interval-scale metric data? Again, a distance such that $d^2 = x^2 + y^2$ on any given coordinate grid, is inherently positive and is ratio-scale.
+(b) Are distances (from a known fixed point) ratio-scale metric data or interval-scale metric data? Again, a distance $d$ such that $d^2 = x^2 + y^2$ on any given coordinate grid, is inherently positive and is ratio-scale.
 
-(c) Temperature (in degrees Centigrade or Celsius, not Kelvin) is a (what?)-scale quantity.
+(c) Temperature (in degrees Centigrade or Celsius, not Kelvin) is a (what?)-scale quantity. Any temperature not in Kelvin can be negative, and thus must be ratio-scale.
 
-(d) In the R language, a categorical variable is called a (what?). The possible values of the categorical variable are called (what?). Sorry, I don't think the answers to this question are in Section 15.1.2.  
+(d) In the R language, a categorical variable is called a (what?). The possible values of the categorical variable are called (what?). Sorry, I don't think the answers to this question are in Section 15.1.2.  Categorical variables (e.g., values limited to specific quantities such as "states in the U.S.") are called _factors_ in `r`.
 
 (e) The common mathematical function that transforms a ratio-scale metric variable to an interval-scale metric variable is (what?). The common mathematical function that transforms an interval-scale metric variable to a ratio-scale metric variable is (what?).  
 
@@ -119,7 +119,7 @@ To save time use `BernBeta()` for this problem. You don't need to `source()` any
 
 ## Solution 6.1A  
 
-`r colorize("PARTIALLY COMPLETE", "orange")`
+`r colorize("COMPLETE", "green")`
 
 (Use `BernBeta()` to make a figure here, and use the caption of the figure to give the kernels of the prior, the likelihood and the posterior. For example, if the prior is a beta with shape parameters 11, and 5, the kernel of the prior is $\theta^{10}(1-\theta)^4$.)   
 
@@ -136,8 +136,9 @@ post = BernBeta(pBetaAB, data)
 
 From what I understand, the _kernel_ is just the function with constants left out. With that in mind, we have
 
-* (i) Beta distribution: $p(\gamma|\theta) = \theta^\gamma (1-\theta)^{1-\gamma} = \theta^H(1-\theta)^{N-H} = \theta^4(1-\theta)^3$ (essentially eq 6.2)
-* (ii) Likelihood function: same as (i), but now exponentials expressed as fractional quantities:   $p(\gamma|\theta) = \theta^\gamma (1-\theta)^{1-\gamma} = \theta^{H/N}(1-\theta)^{1-H/N}=\theta^{4/7}(1-\theta)^{3/7}$
+* (i) prior Beta distribution $p$: $p(\theta|a,b) = \theta^a (1-\theta)^b = \theta^H(1-\theta)^{N-H} = \theta^4(1-\theta)^4$ (essentially eq 6.2)
+* (ii) Likelihood function $L$: same as (i), but now with our new information:   $p(\theta|a,b) = \theta^a (1-\theta)^b = \theta^1(1-\theta)^0$
+* (iii) Posterior $P$ is just likelihood $\times$ prior: $P = L\times p = \theta^4 (1-\theta)^4 \times \theta^1(1-\theta)^0=\theta^5(1-\theta)^4$
 
 ## Solution 6.1B 
 
