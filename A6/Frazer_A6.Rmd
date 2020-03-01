@@ -1,0 +1,527 @@
+---
+title: "Frazer_A6"
+author: "Neil Frazer"
+date: "February 3, 2018"
+output: 
+  html_document: 
+    theme: cerulean
+    toc: true
+    smooth_scroll: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: false
+    code_folding: hide
+---
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 13px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.math{ font-size: 10pt;}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px;
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px;
+}
+pre{/*preformatted text*/ 
+    font-size: 12px;
+}
+p.caption {/* figure captions */ 
+    font-size: 1.0em;
+    font-style: italic; 
+} 
+</style>
+
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+library(knitr)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  ",
+               collapse=TRUE, 
+               #echo=FALSE,
+               #fig.asp=1/gr,
+               fig.height=6,
+               dev="png",
+               warning=FALSE
+               )
+source("sourceMe_A6.R")
+``` 
+
+# BDA Assignment 6 (40 pts) {-}
+NIT means "not in our textbook".  
+
+# Reminders  
+1. `DBDA2E-utilities.R` and `BernBeta.R` aren't needed for this assignment. All that is needed is `sourceMe_A6.R`, which is sourced in the setup of the Rmd for this document. Inside `sourceMe_A6.R` you will find a commented version of `HDIofICDF()` and an edited version of `BernBeta()` that does not call `openGraph()`.  If you look through `BernBeta()` to the end you will notice that in addition to making a plot, it returns a 2-vector containing the shape parameters of the posterior beta.  
+
+2. When defining a distribution, give the _kernel_ of the pdf. For example, the beta kernel is $\theta^{\alpha-1}(1-\theta)^{\beta-1}$ in which $\alpha$ and $\beta$ are called the first and second shape parameters.  
+
+3. The allowed values of a factor are called _levels_. Those levels may have _labels_, which you can assign using 
+[factor()](https://www.rdocumentation.org/packages/base/versions/3.5.2/topics/factor) 
+or 
+[levels()](https://www.rdocumentation.org/packages/base/versions/3.5.2/topics/levels). 
+Hadley Wickham gives a nice short introduction to factors in his book _Advanced R_. The section on data structures, including factors is available online [here](http://adv-r.had.co.nz/Data-structures.html).   
+
+4. Get in the habit of giving every chunk a label. When you are working on your own projects, and tell `knitr()` to save copies of your figures, the default name for a figure will include the label of the chunk that created it. You may have noticed that I tend to use chunk names like `ex6.1`, as that makes it easier to find things in the Rmd using the tiny up and down buttons at the bottom left of the editor pane.     
+
+5. For Exercise 6.5A (page 141 of our text), if your prior is a beta with, say, a=500, b=500, you are saying that someone earlier did 1,000 flips and exactly 500 of them were heads. That being the case, there is now little point in doing an experiment with just ten flips. See my solution below for what I think Kruschke had in mind.  
+
+6. When you graph the prior, likelihood and posterior on the same axes it is easiest to plot the posterior first and let `plot()` decide on the y-limits. Then scale the likelihood so that it displays properly with those y-limits. (Remember, it is only the shape of the likelihood that is meaningful, not its amplitude.) If the prior is proper, plot it without scaling, but if it is improper then all that matters is its shape, and you should scale it so that it displays well. As an example, see the second solution to Ex 6.4 below.  
+
+7. As a general rule, any plot with more than one graph should have a legend. There is a nice introduction to `legend()` [here](http://www.sthda.com/english/wiki/add-legends-to-plots-in-r-software-the-easiest-way).
+<br>
+
+# Ex 6.01  
+(NIT, 10pts)  
+List the technical terms you encountered in this chapter, with a '?' after those you have not encountered before. Look up at least two of the terms that are new to you, and give a definition that makes sense to you.
+
+# Ex 6.02 
+(NIT, 10pts)
+Read Section 15.1.2 (pp. 421-423) of our text and answer the following questions:
+
+(a) Are map coordinates ratio-scale metric data or interval-scale metric data?
+
+    **Answer:** Interval-scale metric data.
+
+(b) Are distances (from a known fixed point) ratio-scale metric data or interval-scale metric data?
+
+    **Answer:** Ratio-scale metric data.
+
+(c) Are temperatures (in degrees Centigrade or Celsius, not Kelvin) ratio-scale metric data or interval-scale metric data?
+
+    **Answer:** Interval-scale metric data.
+
+(d) In the R language, a categorical variable is called a (what?). The possible values of the categorical variable are called (what?).  
+
+    **Answer:** In S/S+ the ancestral language of R, the name 'category' is actually used for a categorical variable, but in R, a categorical variable is called a 'factor'. In both S and R, the possible values of a factor are called levels. Another name for categorical variable (factor) is 'nominal variable' and this term is often used by our textbook. Don't be put off by all this terminology, as the concept is very simple. Coin flips, for example, are a categorical variable because there are only two possible values, heads and tails. A categorical variable with only two levels is said to be dichotomous, whereas one with multiple levels (e.g., red, blue, green, yellow) is said to be polytomous.
+
+(e) What common function transforms a ratio-scale metric variable to an interval-scale metric variable? What common function transforms an interval-scale metric variable to a ratio-scale metric variable?  
+
+    **Answer:** $y=\ln(x)$ maps $0<x<\infty$ to $-\infty<y<\infty$. $y=\exp(x)$ maps $-\infty<x<\infty$ to $0<y<\infty$. 
+
+# Ex. 6.1  
+(page 139 of our text) (10 points)  
+To save time use `BernBeta()` for this problem. You don't need to `source()` anything to create it because it was sourced in the setup chunk above. In parts A,B,C use `BernBeta()` to make a figure, and use the caption of the figure to give (i) the name of the distribution and the formula for its kernel, (ii) the kernel of the likelihood, and (iii) the name of the posterior, and its kernel. Recall that the kernel of a PDF or likelihood is the part that depends on the parameters. For example, if the prior is a beta with shape parameters 11, and 5, its kernel is $\theta^{10}(1-\theta)^4$. Use narrative to make the captions. In part D just give the answer and explain it, using the fact that in each case the complete likelihood is the product of the same three Bernoulli likelihoods. (For a head the likelihood is $\Pr(H\vert\theta)=\theta$, and for a tail the likelihood is $\Pr(T\vert\theta)=1-\theta$.)  
+
+## Ex 6.1A  
+(Put your figure and caption here.)  
+
+```{r ex6.1A}
+post1 <- BernBeta(priorBetaAB =  c(4, 4), 
+                  Data = 1,
+                  plotType=c("Points","Bars")[2],
+                  showCentTend=c("Mean","Mode","None")[3],
+                  showHDI=c(TRUE,FALSE)[2], HDImass=0.95,
+                  showpD =c(TRUE,FALSE)[2], ROPE=NULL
+                )
+```  
+
+<!-- (This is the caption for Fig. 6.1A) -->
+***Figure 6.1A** The prior is a beta(4,4) $\propto \theta^3 (1-\theta)^3$, the likelihood is $\theta^1(1-\theta)^0$, and so the posterior is $\propto \theta^4 (1-\theta)^3$, the kernel of a beta(5,4).*  
+
+## Ex 6.1B  
+Use the posterior from part A as the prior for the next flip.  
+
+```{r ex6.1b}
+post2 <- BernBeta( priorBetaAB = post1, 
+                  Data = 1,
+                  plotType=c("Points","Bars")[2],
+                  showCentTend=c("Mean","Mode","None")[3],
+                  showHDI=c(TRUE,FALSE)[2], HDImass=0.95,
+                  showpD =c(TRUE,FALSE)[2], ROPE=NULL
+                )
+```  
+
+<!-- (This is the caption for Fig. 6.1B) -->
+***Figure 6.1B.**  The prior is a beta(5,4) $\propto \theta^4 (1-\theta)^3$, the likelihood is $\theta^1(1-\theta)^0$, and so the posterior is $\propto \theta^5 (1-\theta)^3$, the kernel of a beta(6,4).*  
+
+## Ex 6.1C    
+Flip a third time and get a tail. What is the new posterior?  
+
+```{r ex6.1C}
+post3 <- BernBeta( priorBetaAB =  post2, 
+                  Data = 0,
+                  plotType=c("Points","Bars")[2],
+                  showCentTend=c("Mean","Mode","None")[3],
+                  showHDI=c(TRUE,FALSE)[2], HDImass=0.95,
+                  showpD =c(TRUE,FALSE)[2], ROPE=NULL
+                )
+```  
+<!-- (This is the caption for Fig. 6.1C) -->
+***Figure 6.1C.** The prior is a beta(6,4) $\propto \theta^5 (1-\theta)^3$, the likelihood is $\theta^0(1-\theta)^1$, and so the posterior is $\propto \theta^5 (1-\theta)^4$, the kernel of a beta(6,5).*  
+
+## Ex 6.1D  
+Do the same three updates but in the order T, H, H instead of H, H, T. Is the final posterior the same for both orderings?  
+
+**Answer:** Yes, because the data are conditionally independent given theta. Remember, we don't know the value of theta---our flip experiments are an attempt to discover it---but that unknown theta is the same for all flips. Another way to see this is to note that scalar multiplication is commutative, so the powers of $\theta$ and $(1-\theta)$ in the final posterior can be evaluated in any order.  
+
+# Ex 6.2  
+(This is exercise 6.2 on page 140 of our text.) (5 pts)  
+
+## Ex 6.2A    
+When Kruschke says "prior belief" he means your prior belief about the preference of the general population.  
+
+## Solution 6.2A  
+You can argue with me about this, but I think the Bayes-Laplace prior is more appropriate here than the Haldane prior IF we are certain that not everyone will vote the same way.  
+
+We get the requested 95% CI _without a plot_ by calling `HDMIofICDF()` which was created in the setup chunk by sourcing `sourceMe_A6.R`.  Here goes:
+
+```{r ex6.2NoPlot}
+## poll 1
+betaPriorAB <- c(1,1) # uniform prior
+N1 <- 100 # people polled
+Z1 <- 58  # people who liked candidate A
+betaPostAB1 <- c(betaPriorAB[1]+Z1, betaPriorAB[2]+N1-Z1)
+HDI_1 <- HDIofICDF(qbeta, shape1=betaPostAB1[1], shape2=betaPostAB1[2])
+
+## poll 2
+betaPriorAB <- betaPostAB1 # new prior is the old posterior
+N2 <- 100 # size of new poll
+Z2 <- 57  # people who liked candidate A
+betaPostAB2 <- c(betaPriorAB[1]+Z2, betaPriorAB[2]+N2-Z2)
+HDI_2 <- HDIofICDF(qbeta, shape1=betaPostAB2[1], shape2=betaPostAB2[2])
+```  
+
+After the first poll, the 95% HDI for the probability that candidate A will win is (`r signif(HDI_1,3)`). After the second poll it is (`r signif(HDI_2,3)`). [If you are reading this in the html, please glance at the Rmd to see how inline code was used to put those numbers into the previous sentence.] 
+
+To check my result, I'll now use `BernBeta()` in a manner similar to that in the previous problem. In that case `BernBeta()` calls `HDMIofICDF()` and puts the result on the plot. Here we go...
+
+```{r ex 6.2A, fig.cap="**Figure 6.2A.** The prior, likelihood and posterior for Exercise 6.2A. The prior is a beta(0,0) sometimes referred to as the Bayes-Laplace prior. Of the 100 people polled, 58 favored candidate A."}
+post <- BernBeta( 
+           priorBetaAB =  c(1, 1), # Bayes-Laplace prior (uniform prior)
+           Data = c(rep(1,58), rep(0,100-58)), # 58 people prefer A, 100-58 prefer B
+           plotType=c("Points","Bars")[2],
+           showCentTend=c("Mean","Mode","None")[3],
+           showHDI=c(TRUE,FALSE)[1], HDImass=0.95,
+           showpD =c(TRUE,FALSE)[2], ROPE=NULL
+          )
+```  
+
+As shown on the above plot of the posterior, the 95% HDI is what we computed above by direct use of `HDMIofICDF()`.    
+
+## Ex 6.2B  
+We sample 100 more people and find that 57 of them prefer candidate A. We update our belief by using the posterior from the last survey as the prior for this new survey.
+
+```{r ex6.2B, fig.cap="**Figure 6.2B.** The prior, likelihood and posterior. The prior is the posterior from the earlier poll. Of the 100 people surveyed in this new poll, 57 favored candidate A."}
+post <- BernBeta( 
+           priorBetaAB =  post, # the posterior from the first survey
+           Data = c(rep(1,57), rep(0,100-57)), 
+           # 57 people prefer A, 100-57 prefer B
+           plotType=c("Points","Bars")[2],
+           showCentTend=c("Mean","Mode","None")[3],
+           showHDI=c(TRUE,FALSE)[1], HDImass=0.95,
+           showpD =c(TRUE,FALSE)[2], ROPE=NULL
+          )
+```
+
+As can be seen from the lower panel of the plot above, the 95% HDI has now narrowed to (0.506, 0.642). In view of the _process error_ three significant figures probably aren't justified here.
+
+# Ex 6.4  
+(This is exercise 6.4 on page 141 of our text.) (5 pts)  
+The prior that Kruschke suggests you use (the upper left panel of the figure on page 128) is a proper approximation to the Haldane prior. You may use the true Haldane prior instead, if you like, because the five flips (4 heads and 1 tails) will result in a proper posterior. If you do the problem that way, plot the prior, the likelihood and the posterior on the same set of axes. Plot the posterior first as a red line (`lwd=2, col="red`), then the likelihood as a black line (`lwd=2`), and finally the prior as a thick dotted green line (`lwd=3, lty=3`). Give your plot a legend and a caption.   
+
+# Solution 6.4 
+The lazy answer for this exercise is to use `BernBeta.R` again, so that is what I will do first. After that I give a plot for the exact calculation using the true Haldane prior instead of the approximation required by `BernBeta.R`  
+
+```{r ex6.4A, fig.cap="**Figure 6.4A.**  Exercise 6.4 using `BernBeta()`. For the prior I used a `beta(0.1,0.1)`, shown in the upper left panel of Figure 6.1 on page 128 of our text. That prior is a proper approximation to the (improper) Haldane prior `beta(0,0)`."}
+post <- BernBeta( 
+           priorBetaAB =  c(0.1, 0.1), # approximate Haldane prior
+           Data = c(rep(1,4), 0),        # 4 heads, 1 tail
+           plotType=c("Points","Bars")[2],
+           showCentTend=c("Mean","Mode","None")[3],
+           showHDI=c(TRUE,FALSE)[1], HDImass=0.95,
+           showpD =c(TRUE,FALSE)[2], ROPE=NULL
+          )
+```  
+
+Here is the thoughtful solution using the exact Haldane prior. As the coin comes up heads four times in five flips, the Bernoulli likelihood is $\theta^4(1-\theta)^1$. The Haldane prior is $\theta^{-1}(1-\theta)^{-1}$, and so the kernel of the posterior is $\theta^3(1-\theta)^0$. The posterior is therefore a beta distribution with shape parameters $a=4, b=1$. As the posterior is the only density here that is properly scaled, we plot it first, and then scale the likelihood and prior so they fit on the plot nicely. Here we go...  
+
+```{r ex6.4B, fig.asp=0.5, fig.cap="**Figure 6.4B** The solution to problem 6.4 using the *exact* Haldane prior beta(0,0). The calculation to get the posterior is algebraic because the beta is the natural conjugate prior of the Bernoulli and binomial distributions."}
+par(mar=c(4,4,2,2)) # reduce plot margins
+theta <- seq(0,1,len=201)
+post <- dbeta(theta,shape1=4,shape2=1)
+ylim <- c(0, 1.05*max(post))
+plot(theta, post, ylim=ylim, lwd=2,  # 1
+     type="l", xaxs="i", yaxs="i",
+     panel.first=grid(), ann=FALSE)
+like <- theta^4*(1-theta)^1
+like <- max(post)/max(like)*like    # scale for plot
+lines(theta, like, col="red", lwd=2) # 2
+prior <- theta^-1*(1-theta)^-1
+prior <- 1/prior[5]*max(post)*prior # scale for plot
+lines(theta, prior, col="green", lwd=3, lty=3) # 3
+title(xlab=expression(theta), line=2.5, cex.lab=1.2)
+title(ylab="density", line=2.5, cex.lab=1.1)
+legend("topleft", inset=0.1, col=c("green", "red", "black"),
+       lwd=c(3, 1, 1), lty=c(3, 1, 1), bty="o",
+       # hide the grid beneath legend
+       box.lty=1, box.lwd=0, box.col="white", bg="white",
+       legend=c("exact Haldane prior", "binomial likelihood", "beta posterior")
+      )
+```  
+
+# Ex 6.6  
+(Not in our text. This exercise is extra credit, meaning that scores are added to the numerator but not the denominator.)  
+
+In this exercise, which has four parts, we complete the "my-beta" quartet that we started in the last assignment with `dmb()`. You'll recall that the default number of vertices in the `dmb()` piecewise approximation for the beta PDF was 301, which is such a large number that the error in the approximation was difficult to see. Therefore in this set of exercises we'll approximate the beta distribution by a piecewise linear function with 51 points.  
+
+## Ex 6.6A  
+(10 points extra credit)  
+Write a function `pmb(q, a=1, b=1, Nj=51)` and compare it with `pbeta()` in the same way we compared `dmb()` to `dbeta()` last week.  
+
+To code `pmb()` begin as you did with `dmb()` by calculating  $f(q)=q^{a-1}(1-q)^{b-1}$ on  
+`qj <- seq(0, 1, length.out=Nj)`.  
+Then do the integral using  
+`pj <- cumsum(diff(qj)*0.5*(fj[-1] + fj[-Nj])); pj <- c(0, pj)`  
+Then make the integral into a CDF by  
+`pj <- pj/pj[Nj]`  
+Then interpolate the given `q[i]` into the `qj[]` to get the desired probabilities `p[i]`.  
+
+**Hint:** To understand the interpolation sketch a piecewise linear approximation to the CDF, with $q$ on the x-axis and $p$, the CDF, on the y-axis.  
+
+## Solution 6.6A  
+
+Here is a chunk to make `pmb(q, a=1, b=1, Nj=51)`.  
+
+```{r ex6.6A1}
+pmb <- function(q, a=1, b=1, Nj=51) {
+  ## Beware! No argument checking!!
+  qj <- seq(0, 1, length.out=Nj)
+  fj <- qj^(a-1)*(1-qj)^(b-1) # unscaled beta
+  pj <- cumsum( diff(qj)*0.5*(fj[-1] + fj[-Nj]) )
+  pj <- c(0, pj) # integral of fj
+  pj <- pj/pj[Nj] # PDF
+  p  <- rep(0, length(q))
+  for (i in 1:length(q)) {
+    j1 <- max(sum(qj < q[i]), 1)
+    j2 <- j1 + 1
+    fr <- (q[i] - qj[j1]) / (qj[j2] - qj[j1])
+    p[i] <- pj[j1] + fr * (pj[j2] - pj[j1])
+  }
+  return(p)
+}
+```  
+
+In this next chunk we test our `pmb()` like we tested our `dmb()` in the last assignment.  
+
+```{r ex6.6A2, fig.asp=0.5, fig.cap="**Figure 6.6A.** Testing `pmb()` our home-made version of `pbeta()`. The left panel graphs `pmb()` against `pbeta()` and the right panel shows the residuals. As the residuals are on the order of 10^-5^, our `pmb()` does very well---for these shape parameters."}  
+par(mgp=c(2.5, 1, 0), mar=c(4.5, 4, 1, 1), mfrow=c(1, 2))
+
+a <- 2; b <- 4
+Nq <- 101
+q  <- seq(0, 1, len=Nq)
+y2 <- pmb(q, a=a, b=b)
+y1 <- pbeta(q, shape1=a, shape2=b)
+
+## left panel
+plot(y1, y2, type="p", bty="l", panel.first=grid(),
+     xlab=bquote("pbeta("*a==.(a)*","~b==.(b)*")"),
+     ylab=bquote("pmb("  *a==.(a)*","~b==.(b)*")")
+     )
+
+fit <- lm(y2~y1)
+abline(fit, col="red")
+
+legend("topleft", inset=0.05, bty="n",
+       lty=c(NA, 1), col=c("black", "red"),
+       pch=c(1, NA), legend=c("data", "fit")
+       )
+
+## right panel
+hist(fit$residuals, main="", col="lightgray")
+```  
+
+## Ex 6.6B  
+(10 points extra credit)  
+Write a function `qmb(p, a=1, b=1, Nj=51)` and compare it with `qbeta()` in the same way you compared `pmb()` to `pbeta()` above. Your code for `qmb()` will be much like your code for `pmb()` except that you interpolate the given `p[i]` to get the desired quantiles `q[i]`. As above, use `a=2` and `b=4`.  
+
+**Hint:** To understand the interpolation use the same sketch you used in Part A.  
+
+## Solution 6.6B  
+
+Here is a chunk to make `qmb(p, a=1, b=1, Nj=51)`.  
+
+```{r ex6.6B1}
+qmb <- function(p, a=1, b=1, Nj=51) {
+  ## Beware! No argument checking!!
+  qj <- seq(0, 1, length.out=Nj)
+  fj <- qj^(a-1)*(1-qj)^(b-1) # unscaled beta
+  pj <- cumsum( diff(qj)*0.5*(fj[-1] + fj[-Nj]) )
+  pj <- c(0, pj) # integral of fj
+  pj <- pj/pj[Nj] # PDF
+  q  <- rep(0, length(p))
+  for (i in 1:length(p)) {
+    j1 <- max(sum(pj < p[i]), 1)
+    j2 <- j1 + 1
+    fr <- (p[i] - pj[j1]) / (pj[j2] - pj[j1])
+    q[i] <- qj[j1] + fr * (qj[j2] - qj[j1])
+  }
+  return(q)
+}
+```  
+
+In this next chunk we test our `qmb()` like we tested our `pmb()` above.  
+
+```{r ex6.6B2, fig.asp=0.5, fig.cap="**Figure 6.6B.** Testing `qmb()` our home-made version of `qbeta()`. The left panel graphs `qmb()` against `qbeta()` and the right panel shows the residuals. As the residuals are on the order of 10^-4^, our `qmb()` does very well---for these shape parameters."}  
+par(mgp=c(2.5, 1, 0), mar=c(4.5, 4, 1, 1), mfrow=c(1, 2))
+
+a <- 2; b <- 4
+Np <- 101
+p  <- seq(0, 1, len=Np)
+y2 <- qmb(p, a=a, b=b)
+y1 <- qbeta(p, shape1=a, shape2=b)
+
+## left panel
+plot(y1, y2, type="p", bty="l",
+     panel.first=grid(),
+     xlab=bquote("qbeta("*a==.(a)*","~b==.(b)*")"),
+     ylab=bquote("qmb("  *a==.(a)*","~b==.(b)*")")
+     )
+
+fit <- lm(y2~y1)
+abline(fit, col="red")
+
+legend("topleft", inset=0.05, bty="n",
+       lty=c(NA, 1), col=c("black", "red"),
+       pch=c(1, NA), legend=c("data", "fit")
+       )
+
+## right panel
+hist(fit$residuals, main="", col="lightgray")
+```  
+
+## Ex 6.6C  
+(10 points extra credit)  
+Write a function `rmb(n, a=1, b=1, Nj=51)` and compare it with `rbeta(n, shape1, shape2)` for `a=2`, `b=4`. Your code will resemble that of `qmb(p, a=1, b=1, Nj=51)`, except that the vector of probabilities `p` is replaced by `n` draws from the uniform distribution on (0,1). (Hint: `p <- runif(n)`.) Compare your `rmb()` with `rbeta()` by drawing 1,000 samples from each function and plotting the quantiles of the `rmb()` _samples_ on the y-axis with the  quantiles from `rbeta()` _samples_ on the x-axis. Add to the plot a red line from (0,0) to (0,1). The foregoing is the left panel of the figure. In the right panel, plot a histogram of the differences between the y- and x-values.        
+
+## Solution 6.6C  
+
+Here is a chunk to make `rmb(n, a=1, b=1, Nj=51)`.  
+
+```{r ex6.6C1}
+rmb <- function(n, a=1, b=1, Nj=51) {
+  ## Beware! No argument checking!!
+  qj <- seq(0, 1, length.out=Nj)
+  fj <- qj^(a-1)*(1-qj)^(b-1) # unscaled beta
+  pj <- cumsum( diff(qj)*0.5*(fj[-1] + fj[-Nj]) )
+  pj <- c(0, pj) # integral of fj
+  pj <- pj/pj[Nj] # PDF
+  p  <- runif(n)
+  q  <- rep(0, n)
+  for (i in 1:length(p)) {
+    j1 <- max(sum(pj < p[i]), 1)
+    j2 <- j1 + 1
+    fr <- (p[i] - pj[j1]) / (pj[j2] - pj[j1])
+    q[i] <- qj[j1] + fr * (qj[j2] - qj[j1])
+  }
+  return(q)
+}
+```  
+
+Here is a chunk to test our `rmb()`. We take `Ns=1000` samples using `rmb(a=2, b=4)` and plot the quantiles of those samples---using `quantile()` with `probs=seq(0.025, 0.975, by=0.025)`---against the corresponding true quantiles from `qbeta()`. 
+
+```{r ex6.6C2, fig.asp=0.5, fig.cap="**Figure 6.6C.** Testing `rmb()` our home-made version of `rbeta()`. The left panel graphs the quantiles of samples from `rmb()` and `rbeta()`, and the right panel shows the differences. If Nj is increased to, say, 301, so that our linear approximation is better, and if the number of samples is increased to several thousand the quantiles of the two sample sets are nearly identical."}
+par(mgp=c(2.5, 1, 0), mar=c(4.5, 4, 1, 1), mfrow=c(1, 2))
+set.seed(123)
+Ns <- 1000 # number of samples
+set.seed(123) # repeatability
+sm <- rmb(Ns, a=2, b=4) # sample 
+set.seed(123) # same random numbers
+sr <- rbeta(Ns, 2, 4)   # reference sample 
+pr <- seq(0.025, 0.975, by=0.025) # probs
+qm <- quantile(sm, probs=pr) # quantiles of rmb() samples
+qr <- quantile(sr, probs=pr) # quantiles of rbeta() samples
+qb <- qbeta(pr, shape1=2, shape2=4) # quantiles of beta
+plot(qb, qm, type="p", ylim=c(0,1), 
+     panel.first=grid(), bty="l",
+     xlab="Quantiles from qbeta()",
+     ylab="Quantiles from samples")
+points(qb, qr, pch=5, col="green")
+lines(c(0,1), c(0,1), col="red")
+legend("topleft", inset=0.05, bty="n", 
+       col=c("black", "green", "red"), 
+       pch=c(1, 5, NA), 
+       lty=c(NA, NA, 1),
+       title=paste(Ns, "samples"),
+       legend=c("rmb() samples",
+                "rbeta() samples",
+                "(0,0) to (1,1)")
+     )
+
+## right panel
+hist(qr-qb, main="", col="lightgray", 
+     xlab=expression(q[rmb()]-q[rbeta()]))
+```   
+
+## Ex 6.6D  
+(10 points extra credit)  
+In this exercise we make a final test by taking 1,000 samples from `rmb()`, making a histogram of them and adding a red line plot of `dmb()` to the histogram. If our `rmb()` and `dmb()` are consistent, the red line should track the histogram.  
+
+## Solution 6.6D  
+
+The first thing we need is our `dmb()` from the last assignment, so we recreate it in the following chunk.  
+
+```{r ex6.6D1}
+dmb <- function(x, a=1, b=1, Ni=301) {
+  ## In the interests of speed, arguments are not checked!!
+  # a,b:  shape parameters
+  # Ni: the number of points to use for the integral
+  xi  <- seq(0, 1, len=Ni)
+  fi   <- xi^(a-1)*(1-xi)^(b-1)
+  int <- sum( diff(xi)*0.5*(fi[-1] + fi[-Ni]) ) 
+  return( x^(a-1)*(1-x)^(b-1)/int )
+}
+```
+In the following chunk we make the requested figure.  
+
+```{r ex6.6D2, fig.width=6, fig.asp=0.6, out.width="80%", fig.cap="**Figure 6.6D.** A density histogram of samples from `rmb()` with the PDF from `dmb()` superposed as a consistency check. The agreement is excellent."}
+par(mgp=c(2.5, 1, 0), mar=c(4.5, 4, 1, 1))
+Ns <- 1000
+set.seed(123) # repeatability
+a <- 2; b <- 4
+sm <- rmb(Ns, a=a, b=b) # samples
+breaks=seq(from=0, to=1, by=0.1)
+hist(sm, freq=FALSE, breaks=breaks, 
+     col="lightgrey", main="", ylab="density",
+     xlab="samples from rmb()")
+centers <- (breaks[-1] + breaks[-length(breaks)])/2
+x <- sort(c(breaks, centers))
+pdf <- dmb(x, a=a, b=b)
+lines(x, pdf, col="red", lwd=2)
+legend("topright", inset=0.10, bty="n",
+       pch=c(15, NA),
+       lty=c(NA, 1), lwd=c(NA, 2),
+       col=c("gray", "red"),
+       pt.cex=c(2.0, NA),
+       legend=c("samples", "PDF"))
+```
+
+
+Evidently our `rmb()` does pretty well. There will always be differences, no matter how many samples we take, because of our piecewise linear approximation to the beta CDF, an approximation controlled by the tuning parameter `Nj`. The larger we make `Nj`, the better the approximation.    
+
+## Remarks  
+
+Exercise 6.6 concludes our re-creation of the `(d,p,q,r)beta()` quartet. For the Gibbs sampler all we need is the machinery that we used in `rmb()`. However, there are occasions in data analysis, even outside of MCMC work, when you may need to make such a quartet for a function that is not supplied by the computer language. As you see, it is fairly straightforward. All you have to do is take a sample $u$ from the uniform distribution on (0,1)---every computer language has the equivalent of R's `runif()`---and interpolate to find $F^{-1}(u)$, where $F$ is your piecewise linear approximation to the CDF.    
+
+# Et cetera  
+If you have a question, or a suggestion for class, tell me here.
+
+
+
+# Et cetera department  
+Coffee and cookies would be nice.
+
+
