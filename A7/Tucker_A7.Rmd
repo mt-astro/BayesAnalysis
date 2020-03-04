@@ -1,6 +1,6 @@
 ---
 title: "A7"
-author: "Mary Smith"
+author: "Michael Tucker"
 date: "2020-03-06"
 output: 
   html_document: 
