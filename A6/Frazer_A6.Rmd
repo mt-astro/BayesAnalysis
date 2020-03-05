@@ -1,7 +1,7 @@
 ---
 title: "Frazer_A6"
 author: "Neil Frazer"
-date: "February 3, 2018"
+date: "2020-02-21"
 output: 
   html_document: 
     theme: cerulean
@@ -77,11 +77,9 @@ Hadley Wickham gives a nice short introduction to factors in his book _Advanced 
 
 4. Get in the habit of giving every chunk a label. When you are working on your own projects, and tell `knitr()` to save copies of your figures, the default name for a figure will include the label of the chunk that created it. You may have noticed that I tend to use chunk names like `ex6.1`, as that makes it easier to find things in the Rmd using the tiny up and down buttons at the bottom left of the editor pane.     
 
-5. For Exercise 6.5A (page 141 of our text), if your prior is a beta with, say, a=500, b=500, you are saying that someone earlier did 1,000 flips and exactly 500 of them were heads. That being the case, there is now little point in doing an experiment with just ten flips. See my solution below for what I think Kruschke had in mind.  
+5. When you graph the prior, likelihood and posterior on the same axes it is easiest to plot the posterior first and let `plot()` decide on the y-limits. Then scale the likelihood so that it displays properly with those y-limits. (Remember, it is only the shape of the likelihood that is meaningful, not its amplitude.) If the prior is proper, plot it without scaling, but if it is improper then all that matters is its shape, and you should scale it so that it displays well. As an example, see the second solution to Ex 6.4 below.  
 
-6. When you graph the prior, likelihood and posterior on the same axes it is easiest to plot the posterior first and let `plot()` decide on the y-limits. Then scale the likelihood so that it displays properly with those y-limits. (Remember, it is only the shape of the likelihood that is meaningful, not its amplitude.) If the prior is proper, plot it without scaling, but if it is improper then all that matters is its shape, and you should scale it so that it displays well. As an example, see the second solution to Ex 6.4 below.  
-
-7. As a general rule, any plot with more than one graph should have a legend. There is a nice introduction to `legend()` [here](http://www.sthda.com/english/wiki/add-legends-to-plots-in-r-software-the-easiest-way).
+6. As a general rule, any plot with more than one graph should have a legend. There is a nice introduction to `legend()` [here](http://www.sthda.com/english/wiki/add-legends-to-plots-in-r-software-the-easiest-way).
 <br>
 
 # Ex 6.01  
@@ -111,13 +109,21 @@ Read Section 15.1.2 (pp. 421-423) of our text and answer the following questions
 (e) What common function transforms a ratio-scale metric variable to an interval-scale metric variable? What common function transforms an interval-scale metric variable to a ratio-scale metric variable?  
 
     **Answer:** $y=\ln(x)$ maps $0<x<\infty$ to $-\infty<y<\infty$. $y=\exp(x)$ maps $-\infty<x<\infty$ to $0<y<\infty$. 
+    
+(f) From lectures (this is not in our text) the function that transforms a ratio scale variable to a probability variable is an instance of the (what?) function. Give the formula. When you make a probability variable into a ratio scale variable the ratio scale variable is called the (what?)  
+
+    **Answer:** The function that transforms a ratio scale variable $r$ to a probability variable $\theta$ is a simple [Michaelis-Menten function](https://en.wikipedia.org/wiki/Michaelis–Menten_kinetics) $\theta=r/(1+r)$. When you transform a probability variable $\theta$ into a ratio scale variable $r$ the ratio scale variable is called the odds, and it is given by $r=\theta/(1-\theta)$.   
+
+(g) Again from lectures: The name of the function that transforms a probability variable to an interval scale variable is (what?). Give the formula in LaTeX. The name of the function that transforms an interval scale variable to a probability is (what?). Give the formula in LaTeX.  
+
+    **Answer:** The function that transforms a probability variable $\theta$ to an interval scale variable $x$ is the `logit` (log-odds) function: thus $x=\mathrm{logit}(\theta) = \log \left[ \theta/(1-\theta) \right]$. The function that transforms an interval scale variable $x$ to a probability $\theta$ is called the `expit` function: thus $\theta=\mathrm{expit}(x) = e^x/(1+e^x) = (1+e^{-x})^{-1}$.   
 
 # Ex. 6.1  
 (page 139 of our text) (10 points)  
 To save time use `BernBeta()` for this problem. You don't need to `source()` anything to create it because it was sourced in the setup chunk above. In parts A,B,C use `BernBeta()` to make a figure, and use the caption of the figure to give (i) the name of the distribution and the formula for its kernel, (ii) the kernel of the likelihood, and (iii) the name of the posterior, and its kernel. Recall that the kernel of a PDF or likelihood is the part that depends on the parameters. For example, if the prior is a beta with shape parameters 11, and 5, its kernel is $\theta^{10}(1-\theta)^4$. Use narrative to make the captions. In part D just give the answer and explain it, using the fact that in each case the complete likelihood is the product of the same three Bernoulli likelihoods. (For a head the likelihood is $\Pr(H\vert\theta)=\theta$, and for a tail the likelihood is $\Pr(T\vert\theta)=1-\theta$.)  
 
-## Ex 6.1A  
-(Put your figure and caption here.)  
+## Solution 6.1A  
+We are told that the prior is a $\mathrm{beta}(\theta\vert 4,4)$, and that we flip once obtaining a head.   
 
 ```{r ex6.1A}
 post1 <- BernBeta(priorBetaAB =  c(4, 4), 
@@ -130,10 +136,10 @@ post1 <- BernBeta(priorBetaAB =  c(4, 4),
 ```  
 
 <!-- (This is the caption for Fig. 6.1A) -->
-***Figure 6.1A** The prior is a beta(4,4) $\propto \theta^3 (1-\theta)^3$, the likelihood is $\theta^1(1-\theta)^0$, and so the posterior is $\propto \theta^4 (1-\theta)^3$, the kernel of a beta(5,4).*  
+***Figure 6.1A** The prior is a beta(4,4) $\propto \theta^3 (1-\theta)^3$, the likelihood is $\theta^1(1-\theta)^0$, and so the posterior is is a beta(5,4) $\propto \theta^4 (1-\theta)^3$.*
 
-## Ex 6.1B  
-Use the posterior from part A as the prior for the next flip.  
+## Solution 6.1B  
+We flip again and obtain a second head. The posterior from part A is now our prior.   
 
 ```{r ex6.1b}
 post2 <- BernBeta( priorBetaAB = post1, 
@@ -146,10 +152,10 @@ post2 <- BernBeta( priorBetaAB = post1,
 ```  
 
 <!-- (This is the caption for Fig. 6.1B) -->
-***Figure 6.1B.**  The prior is a beta(5,4) $\propto \theta^4 (1-\theta)^3$, the likelihood is $\theta^1(1-\theta)^0$, and so the posterior is $\propto \theta^5 (1-\theta)^3$, the kernel of a beta(6,4).*  
+***Figure 6.1B.**  The prior is a beta(5,4) $\propto \theta^4 (1-\theta)^3$, the likelihood is $\theta^1(1-\theta)^0$, and so the posterior is a beta(6,4) $\propto \theta^5 (1-\theta)^3$.*  
 
-## Ex 6.1C    
-Flip a third time and get a tail. What is the new posterior?  
+## Solution 6.1C    
+We flip a third time and get a tail. Our posterior from (B) is now our prior.    
 
 ```{r ex6.1C}
 post3 <- BernBeta( priorBetaAB =  post2, 
@@ -161,7 +167,7 @@ post3 <- BernBeta( priorBetaAB =  post2,
                 )
 ```  
 <!-- (This is the caption for Fig. 6.1C) -->
-***Figure 6.1C.** The prior is a beta(6,4) $\propto \theta^5 (1-\theta)^3$, the likelihood is $\theta^0(1-\theta)^1$, and so the posterior is $\propto \theta^5 (1-\theta)^4$, the kernel of a beta(6,5).*  
+***Figure 6.1C.** The prior is a beta(6,4) $\propto \theta^5 (1-\theta)^3$, the likelihood is $\theta^0(1-\theta)^1$, and so the posterior is a beta(6,5) $\propto \theta^5 (1-\theta)^4$.*   
 
 ## Ex 6.1D  
 Do the same three updates but in the order T, H, H instead of H, H, T. Is the final posterior the same for both orderings?  
@@ -172,10 +178,13 @@ Do the same three updates but in the order T, H, H instead of H, H, T. Is the fi
 (This is exercise 6.2 on page 140 of our text.) (5 pts)  
 
 ## Ex 6.2A    
-When Kruschke says "prior belief" he means your prior belief about the preference of the general population.  
+When Kruschke says "prior belief" he means your prior belief about the preference of the general population. Your prior for candidate A before the poll is a uniform distribution. What is your posterior belief?     
 
 ## Solution 6.2A  
-You can argue with me about this, but I think the Bayes-Laplace prior is more appropriate here than the Haldane prior IF we are certain that not everyone will vote the same way.  
+
+Our prior is a beta(1,1) $\propto \theta^0(1-\theta)^0=1$, i.e., it is the uniform prior, sometimes known as the Bayes-Laplace prior. The poll gives us the likelihood $\theta^{58}(1-\theta)^{42}$ so our posterior is a beta(59,43) $\propto \theta^{58}(1-\theta)^{42}$.  
+
+You can argue with me about this, but I think the Bayes-Laplace prior is more appropriate here than the Haldane prior _IF_ we are certain that not everyone will vote the same way. Notice that the Bayes-Laplace beta is what you get by multiplying the Haldane prior by a likelihood consisting of exactly one head and one tail. By using the Bayes-Laplace prior you are saying that at least one person will vote for A and at least one person will vote for B. That might be an inappropriate prior for an election with fewer than 10 voters, but for an election with hundreds or thousands of voters it seems appropriate.   
 
 We get the requested 95% CI _without a plot_ by calling `HDMIofICDF()` which was created in the setup chunk by sourcing `sourceMe_A6.R`.  Here goes:
 
@@ -199,7 +208,7 @@ After the first poll, the 95% HDI for the probability that candidate A will win 
 
 To check my result, I'll now use `BernBeta()` in a manner similar to that in the previous problem. In that case `BernBeta()` calls `HDMIofICDF()` and puts the result on the plot. Here we go...
 
-```{r ex 6.2A, fig.cap="**Figure 6.2A.** The prior, likelihood and posterior for Exercise 6.2A. The prior is a beta(0,0) sometimes referred to as the Bayes-Laplace prior. Of the 100 people polled, 58 favored candidate A."}
+```{r ex 6.2A, fig.cap="**Figure 6.2A.** The prior, likelihood and posterior for Exercise 6.2A. The prior is a beta(1,1) sometimes referred to as the Bayes-Laplace prior. Of the 100 people polled, 58 favored candidate A."}
 post <- BernBeta( 
            priorBetaAB =  c(1, 1), # Bayes-Laplace prior (uniform prior)
            Data = c(rep(1,58), rep(0,100-58)), # 58 people prefer A, 100-58 prefer B
@@ -252,24 +261,33 @@ Here is the thoughtful solution using the exact Haldane prior. As the coin comes
 ```{r ex6.4B, fig.asp=0.5, fig.cap="**Figure 6.4B** The solution to problem 6.4 using the *exact* Haldane prior beta(0,0). The calculation to get the posterior is algebraic because the beta is the natural conjugate prior of the Bernoulli and binomial distributions."}
 par(mar=c(4,4,2,2)) # reduce plot margins
 theta <- seq(0,1,len=201)
+
+## posterior
 post <- dbeta(theta,shape1=4,shape2=1)
 ylim <- c(0, 1.05*max(post))
-plot(theta, post, ylim=ylim, lwd=2,  # 1
+plot(theta, post, ylim=ylim, lwd=2,  
      type="l", xaxs="i", yaxs="i",
      panel.first=grid(), ann=FALSE)
+
+## likelihood
 like <- theta^4*(1-theta)^1
 like <- max(post)/max(like)*like    # scale for plot
-lines(theta, like, col="red", lwd=2) # 2
+lines(theta, like, col="red", lwd=2) 
+
+## prior
 prior <- theta^-1*(1-theta)^-1
 prior <- 1/prior[5]*max(post)*prior # scale for plot
-lines(theta, prior, col="green", lwd=3, lty=3) # 3
+lines(theta, prior, col="green", lwd=3, lty=3) 
+
+## legend etc.  
 title(xlab=expression(theta), line=2.5, cex.lab=1.2)
 title(ylab="density", line=2.5, cex.lab=1.1)
 legend("topleft", inset=0.1, col=c("green", "red", "black"),
        lwd=c(3, 1, 1), lty=c(3, 1, 1), bty="o",
-       # hide the grid beneath legend
+       # hide the part of the grid behind the legend
        box.lty=1, box.lwd=0, box.col="white", bg="white",
-       legend=c("exact Haldane prior", "binomial likelihood", "beta posterior")
+       legend=c("exact Haldane prior", "binomial likelihood", 
+                "beta posterior")
       )
 ```  
 
