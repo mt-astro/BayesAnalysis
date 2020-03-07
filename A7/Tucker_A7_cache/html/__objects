@@ -1,0 +1,6 @@
+experiments	
+sol7.4	a	acceptance_vals	evalLikelihood	evalPost	i	input_theta	Naccept	next_theta	Nsample	output	P_current	P_next	post	ratio	scale	SD	theta	.Random.seed
+sol7.4pt2	frac_partF	partF_idx	partG_frac	partG_idx_curious	partG_idx_given
+sol7.6	H1	H2	HDI95	hist_out	N1	N2	Nsample	phi_centered	phi_expect	phi_samples	phi_stddev	point1_frac	point1_idx	sample1	sample2	sampleCDF	shift	sorted_samples	T1	T2
+sol7.5	computed_post	i	new_post	newtheta	theta	theta_values
+sol7.5pt2	narrow_idx	narrow_sum	partF_ans	partF_idx	partG_ans	wide_idx	wide_sum

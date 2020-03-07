@@ -1,0 +1,6 @@
+experiments	beta	c	dbeta	plot	print
+sol7.4	[<-	^	<	>	for	hist	if	legend	lines	pbeta	return	rnorm	runif	seq	sum	vector
+sol7.4pt2	&	<=	>=	Nsample	output	sum
+sol7.6	&	<	>	$	abline	abs	approx	as.vector	c	cumsum	hist	legend	max	min	rbeta	sort	sqrt	sum	var
+sol7.5	[<-	<	>	evalPost	for	if	Nsample	plot	rnorm	SD	vector
+sol7.5pt2	&	<=	>=	computed_post	sum	theta_values
