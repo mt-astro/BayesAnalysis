@@ -1,0 +1,349 @@
+---
+title: "Frazer_A7"
+author: "Neil Frazer"
+date: "2020-03-06"
+output: 
+  html_document: 
+    theme: cerulean
+    toc: true
+    smooth_scroll: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: false
+    code_folding: hide
+---  
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 13px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.math{ font-size: 10pt;}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px;
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px;
+}
+pre{/*preformatted text*/ 
+    font-size: 12px;
+}
+p.caption {/* figure captions */ 
+    font-size: 1.0em;
+    font-style: italic; 
+} 
+</style>
+
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+library(knitr)
+library(coda)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  ",
+               eval.after="fig.cap",
+               collapse=TRUE, 
+               dev="png",
+               fig.width=7,
+               out.width="95%",
+               fig.asp=0.9/gr,
+               fig.align="center",
+               cache=TRUE,
+               autodep=TRUE
+               )
+source("sourceMe_A7.R")
+```  
+
+# Introduction  
+
+In Chapter 7 we move from basic Bayesian concepts to the foundations of Markov Chain Monte Carlo (MCMC). Pages 154—156 are optional but I hope you will study them anyway, as they are one of the most accessible treatments I have seen. In them Kruschke shows that the target PDF is an equilibrium point of the Metropolis procedure. His demonstration does _not_ show that it is a _stable_ equilibrium; in theory it could be an _unstable_ equilibrium point, like a ball perched on a mountain top, but in practice such problems are vanishingly rare.  
+
+**Note** that this assignment comes with a file `sourceMe_A7.R` containing Kruschke's `HDIofMCMC()`. The file is sourced in the setup chunk; just put it in the same folder as your A7. I am not asking you to understand how `HDIofMCMC()` works, but try to do so anyway; it's a useful function that you can apply to any set of samples.  
+
+# Tips for figures    
+Here are a couple of tricks I sometimes use when making plots. Neither is essential.   
+
+## Captions  
+To make a caption with inserted values, put `eval.after="fig.cap"` (notice the quotes) and `fig.cap=fig.cap` (notice the lack of quotes) in the chunk header, and then create `fig.cap` as a string at the end of the chunk using `paste()`. The alternative is to use the narrative to make your caption with inline code for the variable values. I often make `eval.after="fig.cap"` a default chunk option in my setup chunk.    
+
+## legend( )  
+To pack extra information into a legend, use its `title` argument. Create it using `paste()` or `paste0()`, and embed `\n` to make it multiline. When you play these kind of games, the box around the legend can cause trouble; to get rid of the box put `bty="n"` in your `legend()` call. Using `legend()` like this isn't especially pretty, but it is quicker to code than annotating with `text()`.      
+
+```{r experiments, eval=FALSE, include=FALSE}
+## Find a bimodal likelihood for this exercise
+f1 <- function(x) {
+  c1 <- 0.7
+  c2 <- 1 - c1
+  a1 <- 10
+  b1 <- 20
+  a2 <- 20
+  b2 <- 10
+  print(c(c1/beta(a1,b1), c2/beta(a2,b2)))
+  7*beta(a1,b1)*dbeta(x, a1, b1) + 3*beta(a2,b2)*dbeta(x, a2, b2)
+}
+plot(f1, xlim=c(0,1), ylab="f(x)")
+```   
+
+# Exercise 7.4  
+(Not in text) (25 points)  
+In this exercise you write a Metropolis algorithm to solve a 1-D problem that is slightly more realistic than the island-hopping politician considered in Section 7.2 of our text. (Using MCMC on any 1-D problem is like using a twelve pound hammer to kill a mosquito, but we overlook that here.) Suppose we have some [compositional data](https://en.wikipedia.org/wiki/Compositional_data) with just two possible components, A and B say, indexed by $\theta$. For example, if $\theta=0.9$ the mixture is 90% A and 10% B. Suppose our likelihood function is  
+
+$$
+L(\theta\vert D) \propto \tag{1}
+7\,\theta^9(1-\theta)^{19} + \ 3\,\theta^{19}(1-\theta)^9
+$$
+and our prior is the Haldane prior $\theta^{-1}(1-\theta)^{-1}$. (a) Use the Metropolis algorithm to generate 2,000 samples of $\theta$ from the posterior and (b) make a histogram. (c) Use `coda::effectiveSize()` to calculate the effective size of your 2,000 samples. For the proposal distribution use the normal with SD = 0.2. (d) Add the posterior PDF to your histogram as a red line. (f) Use your samples to estimate $\Pr(0.2 \le \theta \le 0.5)$. (g) Use your samples to estimate $\Pr(0.3 \le \theta \le 0.4 \, \big\vert\, 0.1 \le \theta \le 0.8)$.
+
+Don't forget to give your plot a legend and a caption. In lieu of a legend, you may annotate your plot roughly like Kruschke does in the panels of Figure 7.1, page 146.  
+
+# Solution 7.4  
+Here is the requested histogram.    
+
+```{r ex7.4, fig.cap=fig.cap}
+par(mgp=c(2,1,0),     # move axis labels closer to axes
+    mar=c(3.5,1,1,1), # reduce margins 2,3,4
+    bg="grey95")      # background color
+set.seed(124) # repeatability
+f <- function(x) # posterior kernel
+  7*x^8*(1-x)^18 + 3*x^18*(1-x)^8 
+
+Ns <- 2000 # numer of samples  
+SD <- 0.2  # sd of proposal normal distn
+
+x    <- numeric(Ns) # theta's
+post <- numeric(Ns) # f(theta's)
+
+x[1] <- runif(1)    # starting theta
+post[1] <- f(x[1])  # posterior at starting theta
+for (i in 2:Ns) {
+  move <- rnorm(1, mean=0, sd=SD)
+  prop <- x[i-1] + move  # proposal
+  
+  if (prop<0 || prop>1) { # stay put
+    x[i] <- x[i-1]        
+    post[i] <- post[i-1]
+    next
+  } 
+  
+  fp <- f(prop)
+  fn <- post[i-1]
+  if (fp >= fn) { # accept
+    x[i] <- prop   
+    post[i] <- fp
+  } else if (runif(1) < fp/fn) { # accept
+    x[i] <- prop
+    post[i] <- fp
+  } else { # stay put
+    x[i] <- x[i-1]
+    post[i] <- post[i-1] 
+  }
+}
+essx <- floor(effectiveSize(x))
+
+## target
+xx <- seq(0, 1, 0.01)
+int <- integrate(f, 0, 1)$value
+yy <- f(xx)/int
+
+hist(x, freq=FALSE, breaks=seq(0, 1, 0.05), 
+     ylim=c(0, 1.05*max(yy)), yaxt="n",
+     xlab=expression(theta), cex.lab=1.2,
+     yaxs="ir", ylab="", main="",
+     border="white", col="skyblue")
+## add target to plot
+lines(xx, yy, col="red", lwd=2)
+## add density to plot  
+dens <- density(x, kernel="gaussian")
+lines(dens$x, dens$y, col="black")
+## add legend to plot
+legTitle <- paste0("Metropolis\n",
+                   "Ns = ", Ns, "\n", 
+                   "ESS = ", essx, "\n",
+                   "SD = ", SD)
+legend("topright", bty="n", inset=c(0.1, 0.2),
+       pch=c(15, NA, NA), pt.cex=c(1.8, NA, NA), 
+       lty=c(NA, 1, 1), lwd=c(NA, 1, 2),
+       col=c("skyblue", "black", "red"),
+       title=legTitle,
+       legend=c("samples", "sample density", "target")
+       )
+fig.cap <- paste0("**Figure 7.4.** Metropolis algorithm with a 
+                  normal proposal distribution. ", Ns, 
+                  " samples were used. The effective samples size was ",
+                  essx, ", and the proposal standard deviation was ",
+                  SD, ". See text for details of the prior and 
+                  likelihood.")
+## answer questions (c) and (d)
+Prf <- sum(0.2 <= x & x <= 0.5)/Ns
+Prg <- sum(0.3 <= x & x <= 0.4)/sum(0.1 <= x & x <= 0.8)
+```  
+
+For question (f) the answer is $\Pr(0.2 \le \theta \le 0.5)$ = `r signif(Prf*100, 3)`%, and for question (g) the answer is $\Pr(0.3 \le \theta \le 0.4 \, \big\vert\, 0.1 \le \theta \le 0.8)$ = `r signif(Prg*100, 3)`%.  
+
+# Exercise 7.5  
+(Not in text) (25 points)  
+Do the same problem you did in Ex 7.4, but use the Gibbs sampler instead of the Metropolis algorithm. 
+
+## Solution 7.5  
+```{r ex7.5, fig.cap=fig.cap}
+par(mgp=c(2,1,0),     # move axis labels closer to axes
+    mar=c(3.5,1,1,1), # reduce margins 2,3,4
+    bg="grey95")      # background color
+set.seed(124)         # repeatability
+
+f <- function(x) # posterior kernel
+  7*x^8*(1-x)^18 + 3*x^18*(1-x)^8 
+rf <- function(f, N=31) { # Our 1-D Gibbs sampler
+  x <- seq(0,1,len=N)
+  y <- f(x)
+  p <- cumsum( diff(x) * 0.5 * (y[-N] + y[-1]) )
+  p <- c(0, p)
+  p <- p/p[N]
+  u <- runif(1)
+  i1 <- max(sum(p<u), 1)
+  i2 <- i1 + 1
+  x[i1] + (x[i2] - x[i1])*(u - p[i1])/(p[i2] - p[i1])
+}
+
+## Generate samples
+Ns <- 2000 # numer of samples  
+x <- numeric(Ns) # allocate storage
+for (i in 1:Ns) x[i] <- rf(f=f)
+
+essx <- floor(effectiveSize(x))
+## target
+xx <- seq(0, 1, 0.01)
+int <- integrate(f, 0, 1)$value
+yy <- f(xx)/int
+## histogram
+hist(x, freq=FALSE, breaks=seq(0, 1, 0.05), 
+     ylim=c(0, 1.05*max(yy)), 
+     xlab=expression(theta), cex.lab=1.2,
+     yaxs="ir", yaxt="n", ylab="", main="",
+     border="white", col="skyblue")
+## add target to plot
+lines(xx, yy, col="red", lwd=2)
+## add density to plot  
+dens <- density(x, kernel="gaussian")
+lines(dens$x, dens$y, col="black")
+## add legend
+legTitle <- paste0("Gibbs sampler\n",
+                   "Ns = ", Ns, "\n",
+                   "ESS = ", essx)
+legend("topright", bty="n", inset=c(0.1, 0.2),
+       pch=c(15, NA, NA), pt.cex=c(1.8, NA, NA), 
+       lty=c(NA, 1, 1), lwd=c(NA, 1, 2),
+       col=c("skyblue", "black", "red"),
+       title=legTitle,
+       legend=c("samples", "sample density", "target")
+       )
+## make caption
+fig.cap <- paste0("**Figure 7.5.** The Gibbs sampler applied to the same
+                  problem as in Figure 7.4. ", "The number of samples used
+                  was ", Ns, ".  The effective samples size was ",
+                  essx, ". See text for details of the prior and 
+                  likelihood.")
+```
+
+The sample histogram and sample density estimate the target distribution very well. It is a bit surprising that these results from the Gibbs sampler are not more noticeably superior to those from the Metropolis algorithm even though the effective sample size from the Gibbs sampler is much larger. The lesson I take from this is that it is a mistake to thin a chain (i.e., to discard correlated samples) unless storage is limited. I did not thin the Metropolis samples, but I was tempted to do so.     
+
+# Exercise 7.6  
+(Not in text) (25 points)
+
+## Preamble  
+The two-coin example of this chapter is somewhat artificial, because the two coins are _independent_. In this exercise we estimate the difference in bias between two coins using MCMC, but without resort to either Metropolis or the Gibbs sampler. As you saw in class, deriving a useful mathematical formula for the PDF of a difference $\theta_1-\theta_2$ is not an easy task. However, it is easy to _sample_ the difference, and then use those samples as a proxy for the PDF itself. 
+
+## The task  
+You have two coins that cannot communicate with each other. We refer to the probability of heads as the bias, $\theta$. Suppose the first coin has unknown bias $\theta_1$ and the second coin has unknown bias $\theta_2$. You flip the first coin $N_1=50$ times obtaining $z_1=35$ heads. You flip the second coin $N_2=40$ times, obtaining $z_1=18$ heads. Generate 2,000 samples of the difference in bias $\phi=\theta_1-\theta_2$ and use them to make a histogram. Estimate (a) the expected value of $\phi$, (b) the SD of $\phi$ and (c) a 95% HDI for $\phi$. (d) Use your samples to estimate $\Pr(-0.1 \lt \phi \lt 0.1)$. Annotate your plot with the sample mean and 95% HDI the way Kruschke does, or use `legend()`.    
+
+# Solution 7.6    
+For each coin we use the Haldane prior and take advantage of conjugacy to get the posterior PDF. We then draw 2,000 samples from each posterior and take their differences to get 2,000 samples $\phi^{(i)}=\theta_1^{(i)} - \theta_2^{(i)}$. Using these samples of $\phi$ we estimate the requested quantities.  
+
+For the first coin the $z_1$ heads and $N_1 - z_1$ tails give a Bernoulli likelihood that when combined with the Haldane prior results in a beta posterior with $a_1 = z_1$ and $b_1=N_1 - z_1$. Similarly for the second coin. In the following chunk we make the requested samples.  
+
+```{r ex7.6, fig.cap=fig.cap}
+par(mgp=c(2.8,1,0),     # move axis labels closer to axes
+    mar=c(4.2,1,1,1),   # reduce margins 2,3,4
+    bg="grey95")        # background color
+set.seed(124)           # repeatability
+s <- function(x) signif(x, 3)
+Ns <- 2000 # number of samples
+
+z1 <- 35
+N1 <- 50
+a1 <- z1
+b1 <- N1 - z1
+theta1 <- rbeta(Ns, a1, b1) # samples
+
+z2 <- 18
+N2 <- 40
+a2 <- z2
+b2 <- N2 - z2
+theta2 <- rbeta(Ns, a2, b2) # samples
+
+phi <- theta1 - theta2 # samples
+sampleMean <- mean(phi)
+theoryMean <- z1/N1 - z2/N2
+
+sampleVar <- var(phi)
+sampleSD  <- sqrt(sampleVar)
+fv <- function(a,b) # variance of theta
+  a*b/(a + b)^2/(a + b + 1)
+theoryVar <- # variance of phi
+  fv(a1, b1) + fv(a2, b2)
+theorySD  <- sqrt(theoryVar)
+
+essPhi <- coda::effectiveSize(phi)
+
+hist(phi, freq=FALSE, breaks=seq(-1, 1, 0.05), xlim=c(-0.2, 0.7), 
+     xlab=expression(phi == theta[1] - theta[2]), cex.lab=1.2,
+     yaxs="i", yaxt="n", ylab="", main="",
+     border="white", col="skyblue")
+
+CIper <- 95 # % percent credible interval
+dper  <- (100 - CIper)/2
+HDI95 <- HDIofMCMC(phi, CIper/100)
+
+abline(v=c(theoryMean, sampleMean),
+       lty=c(2, 1), lwd=c(2, 1), 
+       col=c("red", "black"))
+
+lines(HDI95, c(0.1, 0.1), lwd=4)
+text(HDI95[1], 0.15, pos=3, cex=1.1, paste0(s(HDI95[1])))
+text(HDI95[2], 0.15, pos=3, cex=1.1, paste0(s(HDI95[2])))
+
+legend("topleft", bty="n", inset=c(0.02, 0.05),
+       title="Difference in bias of two coins",
+       legend=c("theory mean","sample mean", "95% HDI"),
+       lty=c(2, 1, 1), lwd=c(1, 1, 4),
+       col=c("red", "black", "black")
+       )
+
+fig.cap <- 
+  paste0("**Figure 7.6.** Samples from the distribution of the 
+          difference of two coin biases. Coin 1 had ", z1, 
+         " heads in ", N2, " throws, and coin 2 had ", z2, " heads
+         in ", N2, " throws. The mean from ", Ns, " samples was ",
+         s(sampleMean), " whereas the mean from theory was ", s(theoryMean),
+         ". The SD from samples was ", s(sampleSD), ", while
+         the SD from theory was ", s(theorySD), ". The effective 
+         sample size was ", essPhi, " as expected because of our method.
+         The ", CIper, "% HDI is [", s(HDI95[1]),", ", s(HDI95[2]), "],
+         which notably does not include zero.")
+
+## Answer question (d)
+Prd <- sum(-0.1 < phi & phi < 0.1)/Ns
+```  
+The answer to question (d) is $\Pr(-0.1 \lt \phi \lt 0.1)$ = `r signif(Prd*100,3)`%.  
+

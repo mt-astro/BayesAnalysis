@@ -1,0 +1,367 @@
+---
+title: "A7"
+author: "Michael Tucker"
+date: "2020-03-06"
+output: 
+  html_document: 
+    theme: cerulean
+    toc: true
+    smooth_scroll: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: false
+    code_folding: hide
+---  
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 13px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.math{ font-size: 10pt;}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px;
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px;
+}
+pre{/*preformatted text*/ 
+    font-size: 12px;
+}
+p.caption {/* figure captions */ 
+    font-size: 1.0em;
+    font-style: italic; 
+} 
+</style>
+
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+library(knitr)
+library(coda)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  ",
+               eval.after="fig.cap",
+               collapse=TRUE, 
+               dev="png",
+               fig.width=7,
+               out.width="95%",
+               fig.asp=1/gr,
+               fig.align="center",
+               cache=TRUE,
+               autodep=TRUE
+               )
+#added for colored text
+colorize <- function(x, color) {
+  if (knitr::is_latex_output()) {
+    sprintf("\\textcolor{%s}{%s}", color, x)
+  } else if (knitr::is_html_output()) {
+    sprintf("<span style='color: %s;'>%s</span>", color, 
+      x)
+  } else x
+}
+
+
+source("sourceMe_A7.R")
+```  
+
+**Score:** 55/75  Good work. See the solutions for Ex. 7.5    
+
+Ex 7.4:  20/25.  Nicely formatted code. No need to evaluate the likelihood, as you calculated the kernel of the prior with algebra. With regard to the histogram, the jaggedness is a sign of two many bins, and if you set `freq=FALSE` in the call to `hist()` your histogram will have the same y-scale as the target PDF. I get quite different numbers for (f) and (g). Perhaps our ESS's are so small that it is just the random numbers we obtained.     
+
+Ex 7.5:  5/25.  Use the same interpolation algorithm you used to to create the `rmb()` function in the prior assignment. Make a piecewise linear density, integrate that to make a piecewise linear CDF, then pick random numbers from $U(0,1)$ and interpolate them into the CDF, to get their associated quantiles.     
+
+Ex 7.6:  25/25. Nice job.   
+
+# Introduction  
+
+In Chapter 7 we move from basic Bayesian concepts to the foundations of Markov Chain Monte Carlo (MCMC). Pages 154—156 are optional but I hope you will study them anyway, as they are one of the most accessible treatments I have seen. In them Kruschke shows that the target PDF is an equilibrium point of the Metropolis procedure. His demonstration does _not_ show that it is a _stable_ equilibrium; in theory it could be an _unstable_ equilibrium point, like a ball perched on a mountain top, but in practice such problems are vanishingly rare.  
+
+**Note** that this assignment comes with a file `sourceMe_A7.R` containing Kruschke's `HDIofMCMC()`. The file is sourced in the setup chunk; just put it in the same folder as your A7. I am not asking you to understand how `HDIofMCMC()` works, but try to do so anyway; it's a useful function that you can apply to any set of samples.  
+
+# Tips for figures    
+Here are a couple of tricks I sometimes use when making plots. Neither is essential.   
+
+## Captions  
+To make a caption with inserted values, put `eval.after="fig.cap"` (notice the quotes) and `fig.cap=fig.cap` (notice the lack of quotes) in the chunk header, and then create `fig.cap` as a string at the end of the chunk using `paste()`. The alternative is to use the narrative to make your caption with inline code for the variable values. I often make `eval.after="fig.cap"` a default chunk option in my setup chunk.    
+
+## legend( )  
+To pack extra information into a legend, use its `title` argument. Create it using `paste()` or `paste0()`, and embed `\n` to make it multiline. When you play these kind of games, the box around the legend can cause trouble; to get rid of the box put `bty="n"` in your `legend()` call. Using `legend()` like this isn't especially pretty, but it is quicker to code than annotating with `text()`.      
+
+```{r experiments, eval=FALSE, include=FALSE}
+## Find a bimodal likelihood for this exercise
+f1 <- function(x) {
+  c1 <- 0.7
+  c2 <- 1 - c1
+  a1 <- 10
+  b1 <- 20
+  a2 <- 20
+  b2 <- 10
+  print(c(c1/beta(a1,b1), c2/beta(a2,b2)))
+  7*beta(a1,b1)*dbeta(x, a1, b1) + 3*beta(a2,b2)*dbeta(x, a2, b2)
+}
+plot(f1, xlim=c(0,1), ylab="f(x)")
+```   
+
+# Exercise 7.4  
+(Not in text) (25 points)  
+In this exercise you write a Metropolis algorithm to solve a 1-D problem that is slightly more realistic than the island-hopping politician considered in Section 7.2 of our text. (Using MCMC on any 1-D problem is like using a twelve pound hammer to kill a mosquito, but we overlook that here.) Suppose we have some [compositional data](https://en.wikipedia.org/wiki/Compositional_data) with just two possible components, A and B say, indexed by $\theta$. For example, if $\theta=0.9$ the mixture is 90% A and 10% B. Suppose our likelihood function is  
+
+$$
+L(\theta\,\vert D) \propto \tag{1}
+7\,\theta^9(1-\theta)^{19} + \ 3\,\theta^{19}(1-\theta)^9
+$$
+and our prior is the Haldane prior $\theta^{-1}(1-\theta)^{-1}$. (a) Use the Metropolis algorithm to generate 2,000 samples of $\theta$ from the posterior and (b) make a histogram. (c) Use `coda::effectiveSize()` to calculate the effective size of your 2,000 samples. For the proposal distribution use the normal with SD = 0.2. (d) Add the posterior PDF to your histogram as a red line. (f) Use your samples to estimate $\Pr(0.2 \le \theta \le 0.5)$. (g) Use your samples to estimate $\Pr(0.3 \le \theta \le 0.4 \, \big\vert\, 0.1 \le \theta \le 0.8)$.
+
+Don't forget to give your plot a legend and a caption. In lieu of a legend, you may annotate your plot roughly like Kruschke does in the panels of Figure 7.1, page 146.  
+
+# Solution 7.4  
+
+`r colorize("COMPLETE", "green")`
+
+(Put your plot and narrative here.)  
+
+```{r sol7.4, fig.cap="Figure 7.4: Metropolis-Hasting sampling of a posterior function, knowing the prior and likelihood."}
+
+evalPost = function(theta){
+  term1 = 7.0*theta^8.
+  term2 = (1.0-theta)^(18.)
+  term3 = 3.0*theta^(18.)
+  term4 = (1.0 -theta)^(8.0)
+  ans = term1*term2 + term3*term4
+  return(ans)
+}
+
+evalLikelihood = function(theta){
+  term1 = 7.0*theta^(9.)
+  term2 = (1.0 -theta)^(19.0)
+  term3 = 3.0*theta^(19.0)
+  term4 = (1.0-theta)^(9.0)
+  ans = term1*term2 + term3*term4
+  return(ans)
+}
+
+#compute things ahead of time
+
+#pick a place to begin
+theta = 0.5
+Nsample = 2000
+output = vector(mode="numeric", length=Nsample)
+SD = 0.2 #stddev of next-sample generation
+
+#precompute these 
+acceptance_vals = runif(Nsample)
+
+Naccept = 0
+for (i in 1:Nsample) {
+  #"query" next theta value, assuming current theta is mean and 
+  # SD is defined above
+  next_theta = rnorm(1, theta, SD)
+
+  #make sure theta in correct bounds  
+  if (next_theta > 1.0) next_theta = 1.0
+  if (next_theta < 0.0) next_theta = 0.0
+  
+  #compute probs for current and next theta
+  P_current = pbeta(theta, 0, 0) * evalLikelihood(theta)
+  P_next = pbeta(next_theta, 0, 0) * evalLikelihood(next_theta)
+
+  #compare post ratio to randomly drawn 0-1 value to determine acceptance  
+  ratio = P_next / P_current
+  a = acceptance_vals[i]
+  if (ratio > a) { 
+    theta = next_theta
+    Naccept = Naccept + 1
+  }
+  output[i] = theta
+}
+
+hist(output, 100, plot=TRUE, freq=TRUE, density=10)
+input_theta = seq(0, 1, by=0.01)
+post = evalPost(input_theta)
+
+scale = sum(output)/sum(post) * 2.2 # assuming the extra scaling factor is just due to different sampling?
+lines(input_theta, post*scale, type="l", lwd=2.,col="red")
+legend(0.7, 60, legend="Posterior", col="red", lwd=2.)
+
+```
+
+We are given the Haldane prior $p(\theta)$ and the likelihood function $L(\theta|D)$. The posterior, $P(\theta)$, is simply $P = p(\theta)\times L(\theta|D)$. Since we have functional forms for both the prior and likelihood, we can compute the posterior function analytically:
+
+$$
+P(\theta) \propto p(\theta)\times L(\theta|D) = \theta^{-1}(1-\theta)^{-1} \times \big(7\theta^9(1-\theta)^{19} + 3\theta^{19}(1-\theta)^9 \big)
+$$
+
+Using some handy-dandy multiplication, we can distribute the prior:
+$$
+P(\theta) \propto \big (\theta^{-1}(1-\theta)^{-1}\times 7\theta^9(1-\theta)^{19}\big ) + \big ( \theta^{-1}(1-\theta)^{-1}\times 3\theta^{19}(1-\theta)^9 \big )
+$$
+Do some simplification:
+$$
+P(\theta) \propto 7\theta^8(1-\theta)^{18} + 3\theta^{18}(1-\theta)^8
+$$
+And now we have our posterior function!This is confirmed with Fig. 7.4 above, although my extra scaling factor to align the curve with the histogram is still a mystery. I'm chalking it up to different sampling densities, similar to trapezoidal rule, but adding a "sample spacing" term in my scaling didn't help either. 
+
+```{r sol7.4pt2}
+
+#part f)
+partF_idx = output <= 0.5 & output >= 0.2
+frac_partF = sum(partF_idx / Nsample)
+
+#part g)
+partG_idx_given = output >= 0.1 & output <= 0.8
+partG_idx_curious = output >= 0.3 & output <= 0.4
+partG_frac = sum(partG_idx_curious) / sum(partG_idx_given)
+
+```
+
+part f)  
+Now on to some actual results. With our `r round(Nsample)` samples, we find `r round(frac_partF*100.,1)`% of sample are within the bound of $0.2\leq\theta\leq0.5$.  
+
+part g)
+We find `r round(sum(partG_idx_given)/Nsample*100.,1)`% of our sample is bounded by $0.1\leq\theta\leq0.8$ and another `r round(sum(partG_idx_curious)/Nsample*100., 1)`% of our sample is within $0.3\leq\theta\leq0.4$. With these values in-hand, we find $Pr(0.3\leq\theta\leq0.4 \;\vert\; 0.1\leq\theta\leq0.8) \approx$ `r round(partG_frac*100, 1)`%.
+
+# Exercise 7.5  
+(Not in text) (25 points)  
+Do the same problem you did in Ex 7.4, but use the Gibbs sampler instead of the Metropolis algorithm. 
+
+# Solution 7.5  
+
+`r colorize("PARTIALLY COMPLETE", "orange")`
+
+(Put your plot and narrative here.)  
+
+```{r sol7.5}
+
+theta = 0.5
+computed_post = vector(mode="numeric", length=Nsample)
+theta_values = vector(mode="numeric", length=Nsample)
+
+for (i in 1:Nsample){
+  newtheta = rnorm(1, theta, SD)
+  if (newtheta < 0.0) newtheta=0.0
+  if (newtheta > 1.0) newtheta=1.0
+  new_post = evalPost(newtheta)
+  
+  theta_values[i] = newtheta
+  computed_post[i] = new_post
+  
+  theta = newtheta
+}
+
+plot(theta_values, computed_post)
+
+```
+
+
+I'm not sure I completely understand the Gibbs sampler. From Sec. 7.4.4, it seems like the Gibbs sampler is the same of the Metropolis-Hastings sampler coded above, except no conditional is computed for accepting the proposed new parameter value, and all proposed new parameters values are simply accepted. Yet this seems like it would simply sample the known (input) distribution, without converging on any given location? Not sure what I am misunderstanding. 
+
+```{r sol7.5pt2}
+
+#compute CDF from posterior values
+# even if this is the wrong approach, its practice computing CDF
+
+partF_idx = theta_values <= 0.5 & theta_values >= 0.2
+partF_ans = sum(computed_post[partF_idx]) / sum(computed_post)
+
+wide_idx = theta_values <= 0.8 & theta_values >= 0.1
+narrow_idx = theta_values <= 0.4 & theta_values >= 0.3
+wide_sum = sum(computed_post[wide_idx])
+narrow_sum = sum(computed_post[narrow_idx])
+partG_ans = narrow_sum / wide_sum
+
+```
+
+Regardless, we can compute various statistics for the derived theta sampling chain similar to Ex. 7.4. 
+
+part f)  
+From our (hopefully) Gibbs sampler, we find `r round(partF_ans*100., 1)`% of points fall between $0.2\leq\theta\leq0.5$. 
+
+part g)  
+Again, we find $Pr(0.3\leq\theta\leq0.4 \; \vert \; 0.1\leq\theta\leq0.8) \approx$ `r round(partG_ans*100., 1)`%. 
+
+comments:
+
+These values match what we found in Ex. 7.4, but that is hanrdly surprising as we essentially gave ourselves the answer when we started (which is why I doubt my Gibbs sampler). I'll ask you in-class next week about the Gibbs sampler and what I'm doing wrong.
+
+
+# Exercise 7.6  
+(Not in text) (25 points)
+
+## Preamble  
+The two-coin example of this chapter is somewhat artificial, because the two coins are _independent_. In this exercise we estimate the difference in bias between two coins using MCMC, but without resort to either Metropolis or the Gibbs sampler. As you saw in class, deriving a useful mathematical formula for the PDF of a difference $\theta_1-\theta_2$ is not an easy task. However, it is easy to _sample_ the difference, and then use those samples as a proxy for the PDF itself. 
+
+## The task  
+You have two coins that cannot communicate with each other. You flip the first one $N_1=50$ times obtaining $z_1=35$ heads. You flip the second coin $N_2=40$ times, obtaining $z_1=18$ heads. Generate 2,000 samples of the difference $\phi=\theta_1-\theta_2$ and use them to make a histogram. Estimate (a) the expected value of $\phi$, (b) the SD of $\phi$ and (c) a 95% HDI for $\phi$. (d) Use your samples to estimate $\Pr(-0.1 \lt \phi \lt 0.1)$. Annotate your plot with the sample mean and 95% HDI the way Kruschke does, or use `legend()`.    
+
+# Solution 7.6  
+
+`r colorize("COMPLETE", "green")`
+
+(Put your plot and narrative here.)
+
+```{r sol7.6}
+
+#given info
+Nsample = 2000
+
+N1 = 50
+H1 = 35
+T1 = N1 - H1
+
+N2 = 40
+H2 = 18
+T2 = N2-H2
+
+#ensuing calculations assume the distribution of phi is normal and the stddev of the 
+# normal distribtion is a valid measurement of the deviations
+
+sample1 = rbeta(Nsample, H1,T1)
+sample2 = rbeta(Nsample, H2, T2)
+phi_samples = sample1 - sample2
+hist_out = hist(phi_samples, sqrt(Nsample), plot=FALSE)
+phi_expect = sum(hist_out$mids * hist_out$counts) / sum(hist_out$counts)
+phi_centered = phi_samples - phi_expect
+phi_stddev = sqrt(var(phi_centered))
+
+# we could compute a gaussian 95% HDI assuming 95% CI = 2 x stddev
+# but good practice for computing the CDF
+
+#super inefifcient way to compute
+
+#shift values to strictly positive for CDF computation
+shift = abs(min(phi_samples))
+sorted_samples = sort(phi_samples) + shift
+sampleCDF = cumsum(sorted_samples) / max(cumsum(sorted_samples))
+HDI95 = approx(sampleCDF, sorted_samples, c(0.025, 1.0-0.025))$y - shift
+
+point1_idx = phi_samples > -0.1 & phi_samples < 0.1
+point1_frac = sum(point1_idx) / Nsample
+
+
+# plotting!
+hist(phi_samples, sqrt(Nsample), density=10, plot=TRUE)
+abline(v=phi_expect, lwd=3., col="red")
+abline(v=as.vector(HDI95), lwd=3., col="blue")
+legend(-0.1, 125, legend=c("E[x]", "95% HDI"), lwd=3., col=c("red", "blue"))
+
+
+
+```
+
+
+Expectation value: `r round(phi_expect, 3)`  
+Stddev: `r round(phi_stddev,3)`  
+95% HDI: `r round(HDI95[1], 3)`-`r round(HDI95[2], 3)`  
+$Pr(-0.1<\phi<0.1)=$ `r round(point1_frac, 3)`
