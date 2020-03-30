@@ -130,7 +130,7 @@ Before trying any new code on real data one should always try it first on synthe
 par(mar=c(4, 4, 1, 1),
     mgp=c(2.5, 1, 0),
     bg="grey97")
-set.seed(2222222)
+set.seed(2)
 N <- 20     # number of data pairs
 a <- 1.0    # slope
 b <- 1.0    # intercept 
