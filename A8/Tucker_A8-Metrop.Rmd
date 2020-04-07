@@ -381,9 +381,8 @@ gen_prop = function(x, dx, y, dy, p, dp, lnp, dlnp) {
   xs = rnorm(length(x), mean=x, sd = dx)
   ys = rnorm(length(y), mean=y, sd=dy)
   ps = rnorm(length(p), mean=p, sd=dp)
-  lnps = rnorm(length(lnp), mean=exp(lnp), sd=exp(dlnp))
-  lnps[lnps <= 0.] = 1e-30
-  return (list( xs=xs, ys=ys, ps=ps , lnps = log(lnps)))
+  lnps = rnorm(length(lnp), mean=lnp, sd=dlnp)
+  return (list( xs=xs, ys=ys, ps=ps , lnps = lnps))
 }
 
 evalPost = function(x0vec, xovec, yvec, pvec) {
@@ -451,8 +450,8 @@ psdb = 0.1
 
 #compute some generic stuff
 
-sdlnsx = log(psdx)
-sdlnsy = log(psdy)
+sdlnsx = 0.025 #log(psdx)
+sdlnsy = 0.025 #log(psdy)
 xoc = xo - mean(xo)
 
 
@@ -540,6 +539,8 @@ bmap <- b[jmap]
 ## Restore the x-data, for use in plotting below.
 xo <- xoo
 
+frac_accept = Nacc / Ns
+
 ```
 
 
@@ -557,5 +558,5 @@ plot(a, b, pch=".", col=myblack)
 
 ```
 
-
+WARNING: Dangerously low acceptance rate: `r round(frac_accept*100., 2)`% (`r Nacc`/`r Ns`)
 
