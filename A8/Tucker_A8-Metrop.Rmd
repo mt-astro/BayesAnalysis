@@ -444,14 +444,14 @@ posterior <- function(xo,yo,x,a,b,lnsx,lnsy,nu=2,log=FALSE){
 psdx = 0.1
 psdy = 0.1
 pa = 0.9
-psda = 0.1
+psda = 0.05
 pb = 1.1
 psdb = 0.1
 
 #compute some generic stuff
 
-sdlnsx = 0.025 #log(psdx)
-sdlnsy = 0.025 #log(psdy)
+sdlnsx = 0.01 #log(psdx)
+sdlnsy = 0.01 #log(psdy)
 xoc = xo - mean(xo)
 
 
@@ -460,7 +460,7 @@ xoc = xo - mean(xo)
 
 ```{r sol-run-retry}
 
-Ns <- 5500 # number of samples, make it 1500 while debugging
+Ns <- 10000 # number of samples, make it 1500 while debugging
 nu <- 2    # normality of y-data
 
 ## preallocate storage
@@ -479,8 +479,8 @@ xo  <- xo - xobar # centered x-data
 
 ## initial values
 X[1, ] <- xo
-a[1] <- 1.5
-b[1] <- mean(yo)
+a[1] <- 1.1
+b[1] <- mean(yo) 
 Y[1, ] = a[1]*X[1, ] + b[1]
 lnsx[1] <- log(0.1)
 lnsy[1] <- log(0.1)
@@ -552,11 +552,19 @@ hist(a)
 hist(b)
 ## Reduce the opacity of "black" for plotting
 ## Otherwise the scatterplot is nearly solid black
-myblack <- adjustcolor("black", alpha.f=0.25)
+myblack <- adjustcolor("black", alpha.f=0.5)
 plot(a, b, pch=".", col=myblack)
-
 
 ```
 
 WARNING: Dangerously low acceptance rate: `r round(frac_accept*100., 2)`% (`r Nacc`/`r Ns`)
 
+More diagnostic plots...
+```{r plots-pt2}
+par(mfcol=c(1,3))
+
+plot(1:(Ns-burnin), a)
+plot(1:(Ns-burnin), b)
+plot(1:(Ns-burnin), lnpost)
+
+```
