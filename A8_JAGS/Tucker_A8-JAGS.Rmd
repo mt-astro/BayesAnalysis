@@ -1,0 +1,93 @@
+---
+title: "A8-JAGS"
+author: "Michael Tucker"
+date: "2020.04.17"
+output: 
+  html_document: 
+    theme: cerulean #paper #cosmo #journal #readable
+    toc: true
+    smooth_scroll: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---  
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 13px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.math{ font-size: 10pt;}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px;
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px;
+}
+pre{/*preformatted text*/ 
+    font-size: 12px;
+}
+p.caption {/* figure captions */ 
+    font-size: 1.0em;
+    font-style: italic; 
+} 
+</style>
+
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+source("DBDA2E-utilities.R")
+library(knitr)
+library(coda)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  ",
+               #echo=FALSE,
+               cache=c(TRUE, FALSE)[2], 
+               autodep=c(TRUE, FALSE)[2],
+               eval.after="fig.cap",
+               collapse=TRUE, 
+               dev="png",
+               fig.width=7.0,
+               out.width="95%",
+               fig.asp=0.9/gr,
+               fig.align="center"
+               )
+## handy function to color text
+colorize <- function(x, color) {
+  if (knitr::is_latex_output()) {
+    sprintf("\\textcolor{%s}{%s}", color, x)
+  } else if (knitr::is_html_output()) {
+    sprintf("<span style='color: %s;'>%s</span>", color, x)
+  } else x
+}
+```  
+
+# The Assignment {-} 
+
+- Use `runjags::run.jags()` or `runjags::autorun.jags()` to analyze exactly the **same data** that we analyzed in A8-Metrop and A8-GS.^[(Reminder) First, `save-as` this file to `(yourname)_A8-JAGS.Rmd` and correct the YAML headers. Then use this file to build out your solution.]  
+
+# Some suggestions {-}  
+
+- Begin by knitting and reading the file `JAGSexample.Rmd`. In that file (made from a couple of assignments in a previous year) I do a toy regression problem twice using JAGS. I first do the problem using JAGS stand-alone, as if from a terminal (Section 2). I then do the problem using `runjags::autorun.jags()` (Section 3). 
+
+- When you think you understand what is going on in `JAGSexample.Rmd`, look at `Frazer_A8-JAGS.Rmd`. There I do (most of) this very assignment using JAGS stand-alone, which is fussier than using `runjags`. In other words, I have already done (most of) this assignment the hard way, now I am asking you to do it the "easy" way.  
+
+- This assignment is a **class project**, so cooperate by Slack and Zoom, or GIT if you know it. Email each other code. Do whatever you need to get it done, and send me your work by midnight Friday April 17. It should not include my stand-alone work on the problem. Give me nicely formatted code.     
+
+- The code for posterior prediction is in `Frazer_A8-GS.Rmd`.  
+
+- A caveat: The quantity `lnsx` is poorly resolved, so `autorun.jags()` may complain or want to take a prohibitive number of samples. If that happens, consider switching to `run.jags()` so you can limit the number of samples. 
+
+- Good luck!
