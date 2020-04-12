@@ -1,0 +1,498 @@
+---
+title: "JAGSexample"
+author: "Neil Frazer"
+date: "2020-04-04"
+output: 
+  html_document: 
+    theme: cerulean
+    toc: true
+    smooth_scroll: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 13px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 13px}
+.math{ font-size: 10pt;}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px;
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px;
+}
+pre{/*preformatted text*/ 
+    font-size: 12px;
+}
+p.caption {/* figure captions */ 
+    font-size: 1.0em;
+    font-style: italic; 
+} 
+</style>
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+library(knitr)
+library(coda)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  ",
+               collapse=FALSE, 
+               #echo=TRUE,
+               #fig.asp=1/gr,
+               fig.width=7,
+               out.width="90%",
+               fig.align="center",
+               cache=c(TRUE,FALSE)[1],
+               autodep=TRUE,
+               dev="png",
+               #eval.after="fig.cap",
+               warning=FALSE
+               )
+source("DBDA2E-utilities.R", echo=FALSE, verbose=FALSE)
+```
+
+# Introduction  
+
+- Why JAGS? Because it is an improved version of BUGS (improved by being written in C instead of Pascal), which has been around for a long time, is well understood, has a very large user base, is used by many statisticians and has hundreds if not thousands of easy-to-find examples on the web. Most important, the JAGS language is just like the mathematical language you would use to specify a model. [Stan](https://en.wikipedia.org/wiki/Stan_(software)), which we will also learn, is faster, but it is still undergoing rapid development, and there are some things it doesn't do quite as well as JAGS. Moreover Stan is written in C++ and it has retained the flavor of that language, which can be difficult to get used to, although, to be fair, the error diagnostics are probably better in Stan.     
+
+- Our purpose here is to run the toy regression model shown on page 14 of the 
+[JAGS manual](http://people.stat.sc.edu/hansont/stat740/jags_user_manual.pdf). We will monitor (i.e., keep the samples for) the intercept, the slope and the standard deviation.  
+
+- Along with this file, you should have received a version of `DBDA2e-utilities.R`, and `jags_user_manual`. If you haven't already installed JAGS, you should get it [here](https://sourceforge.net/projects/mcmc-jags/files/). Remember that JAGS is a stand-alone application, not an R-package. Install it the way you would install any other app for your computer.   
+
+- In this document we will solve the toy problem **two ways**. The **first way** is to run JAGS stand-alone as if we were doing so from a terminal. (I cannot be present to help while you work at a terminal, but fortunately R Markdown lets us have chunks that act like terminals.) The **second way** is with `runjags::autorun.jags()` which is the easiest way I know. For more information on the `runjags` package see the [quickstart guide](http://runjags.sourceforge.net/quickjags.html).    
+
+- Please do not confuse the `runjags` package with the `rjags` package. Some functions in `runjags` call functions in `rjags`, but not vice-versa. The `rjags` package was written by Martyn Plummer, the author of JAGS, to make JAGS callable from inside R. The `runjags` package was written by Matt Denwood as an easier-to-use version of `rjags`. (There is also a package called `r2jags`, which I don't use.)      
+
+- The other package you need to know about is `coda`. If you are a musician or a seismologist you will know that "coda" means "that which prolongs something or comes after it". The `coda` package was also written by Plummer, to plot the samples from JAGS and run diagnostics. The `rjags` package and the `runjags` package both call functions in `coda` and so can you if you want. Many of Kruschke's utility functions call functions in `coda`.  
+
+- When you have forgotten all the above remember this: (1) If you like R, always use `runjags` rather than `rjags`; (2) If Python is your baby, run JAGS with the [pyJAGS package](https://pypi.org/project/pyjags/), or stand-alone. (3) If Matlab is your preference, run JAGS stand-alone.  
+
+# Stand-alone JAGS  
+
+Here we run JAGS as if from a terminal window, i.e., without `runjags` or `rjags`. To do that we must first make the files that JAGS will want to read: (1) the data file, (2) the model file (often called the bug file for reasons both historical and humorous), (3) the intial value files (one for each chain), and (4) the command file. The command file is just a text file containing all the commands that you would otherwise type into the terminal window. When you have a command file (named `cmd`, say), all you type in the terminal window is `jags cmd`, and JAGS does the rest. When you do that you are said to be running JAGS in _batch mode_ rather than _interactively_.       
+
+## Data file  
+The data are on page 14 of Version 4.3.0 of the JAGS User Manual. In this next chunk I write the data file using `dump()` so it will be there to read as if I had sent it to you separately. Then I read it in using `source()`.  
+
+```{r datafile}
+x <- c(1,2,3,4,5)
+y <- c(1,3,3,3,5)
+dump(c("x","y"), file="data.R") 
+
+rm(x, y) # now they're gone
+source("data.R") # now they're back
+```  
+
+In this next chunk I plot the data (one should _always_ plot the data) and do a fit using `stats::lm()`.  
+
+```{r makeDataFile, fig.height=4, fig.cap="**Figure 1.** Data from page 14 of the JAGS manual, version 4.3.0."}
+
+par(mar=c(4.1,4.1,1,2))
+plot(x,y,type="b", lty=3, ann=FALSE)
+title(xlab="x", ylab="y", line=2.2)
+
+## Add the fit from lm()
+lmfit <- lm(y~x)
+abline(lmfit, col="red", lwd=2, lty=1)
+legend("topleft", inset=0.05, bty="n",
+       pch=c(1,NA), lty=c(3,1), col=c("black","red"),
+       legend=c("data", "least squares fit using lm()"),
+       title="Toy regression problem from JAGS manual"
+       )
+## Annotate slope and intercept, nonstandard use of legend()
+s1 <- paste("intercept =", round(coef(lmfit)[1], digits=3))
+s2 <- paste("slope     =", round(coef(lmfit)[2], digits=3))
+legend("bottomright", inset=0.05, bty="n",
+       title="Coefficients from fit",
+       legend=c(s1,s2)
+      )
+```  
+
+##  Model file  
+
+If we weren't using RStudio and doing this as a homework, you would probably type the model into a file using a simple text editor such as the Mac's `textedit`. However, here we are in R Markdown, so in this next chunk we create a model string and write it to a file using `writelines()`.  
+
+```{r modelfile}
+modelString <- # character string
+"model {
+  for (i in 1:length(x)) {
+     y[i]  ~ dnorm(mu[i], tau)
+    mu[i] <- alpha + beta * (x[i] - x_bar)
+  }
+  x_bar <- mean(x)
+  alpha  ~ dunif(-10,10)
+  beta   ~ dunif(-10,10)
+  logsigma ~ dunif(-5,5)
+  sigma   <- exp(logsigma)
+  tau <- 1/sigma^2
+}
+"
+writeLines(modelString, con="bug")
+```  
+
+As we learned in lectures, the theoretically uninformative prior for the standard deviation $\sigma$ (and precision, $\tau$ because it is a power of $\sigma$) is the reciprocal prior. The easiest way to implement such a prior is to give $\log(\sigma)$ a uniform prior on a finite interval, and then get $\sigma$ by taking the exponential of $\log(\sigma)$. Later, when we examine our posteriors, we need to verify that the posterior of $\sigma$ does not have probability piled up at its lower or upper boundaries.  In the model we give $\log(\sigma)$ a uniform prior on the interval $(-5,5)$, hence the support of $\sigma$ is the interval (`r round(exp(c(-5,5)),digits=3)`). I give the slope and intercept uniform priors because, without looking at the data, I have no particular reason to assume positivity of the slope, for example. That may sound a bit strange when one can see that the slope is obviously positive, but _prior_ means what you know _before_ you gather any data.  
+
+## Initial value files  
+
+JAGS will want to read some files with initial values in them. Again, you could make those files with any text editor, but since we are in R Markown we'll make them here.  
+
+Initial values must be consistent with the distributions used for their respective variables (or JAGS will throw an error) and they should be different for each chain. By consistent I mean that when a quantity such as sigma is inherently positive, the initial value must also be positive. JAGS doesn't care whether the initial values are the same for each chain, but _we_ care because one of our criteria for convergence is that chains starting in different places should eventually resemble each other stochastically.  
+
+In the following chunk I make initial values in a couple of ways depending on the argument of the initial if-statement; the first way gave trouble for reasons I was too lazy to figure out, so I wound up using the second way, pulling reasonable values out of the air based on the look of the plotted data. 
+
+```{r makeInitialValueFiles}
+nChains <- 3 
+if(FALSE) { # if TRUE do this
+  for (iChain in 1:nChains) {
+    yy <- sample(y, replace=TRUE)
+    alpha <- mean(yy)
+    beta  <- (yy[N] - yy[1]) / (x[N] - x[1])
+    logsigma  <- log(0.1 + sd(yy))
+    dump( # write initial value file for chain iChain
+         c("alpha","beta","logtau"), 
+         file=paste0("A9b-inits",iChain,".R")
+        )
+  } # end for
+} else { # do this instead
+  alphas <- c( 1,     3,     5)
+  betas  <- c(-1,     1,     3)
+  logsigmas   <- log(c(0.5,1.0,2.0))
+  for (iChain in 1:nChains) {
+    alpha     <- alphas[     iChain]
+    beta      <- betas[      iChain]
+    logsigma  <- logsigmas[  iChain]
+    dump( # write initial value file for iChain
+         c("alpha", "beta", "logsigma"), 
+         file=paste0("inits", iChain, ".R")
+        )
+  } # end for
+} # end else
+```  
+
+## The command file  
+
+Although I cannot now recall I read this, my recollection is that JAGS will run chains in parallel when it is invoked from the command line or in batch mode. (The `runjags` package also does that, but the `rjags` package does not.)  In the following chunk I create a string containing commands for JAGS. These commands could be given one by one in a terminal window, but in most cases it is more convenient to put them in a text file and then give JAGS the text file as input. Batch mode, in other words. 
+
+```{r commandfile}
+cmdFileString <- # character string, note quotes
+"
+model in bug
+data  in data.R
+
+load glm
+
+compile, nchains(3)
+
+inits in inits1.R, chain(1)
+inits in inits2.R, chain(2)
+inits in inits3.R, chain(3)
+
+initialize
+
+update 400
+
+monitor  alpha, thin(2)
+monitor  beta,  thin(2)
+monitor  sigma, thin(2)
+
+update 800
+
+coda *
+"
+
+writeLines(cmdFileString, con="cmd")
+```  
+
+The contents of the command file are explained in the JAGS manual, which is mercifully short. The commands followed by "in" are self-explanatory. `glm` is the name of a JAGS module that you nearly always want to load. `compile, nchains(3)` tells JAGS to build the Bayesian network, and prepare to run 3 chains. `initialize` means optimize some tuning parameters. `update` means Go get some samples". `monitor  alpha, thin(2)` means Keep the alpha value from every second sample. `update 800` means I'm finished fooling around: get me 800 samples. `coda *` means Write the samples to files with default names (given below).   
+
+## Execute JAGS  
+
+The header of the following chunk is '{bash execute, results="hide"}'. Here [bash](https://en.wikipedia.org/wiki/Bash_(Unix_shell)) is just the command to create a terminal session, and `execute` is just a chunk label. The only command we give the terminal is `jags` followed by the name of the command file. If you had a terminal window open you would just type "jags cmd" and hit return.
+
+```{bash execute, results="hide"}
+jags cmd
+```  
+
+## Read sample files  
+
+As JAGS runs, it writes the samples into plain text files, one file for each chain. The default names for these files are `CODAchain1.txt`, `CODAchain2.txt` and so forth. JAGS also creates a plain text file whose default name is `CODAindex.txt` which is a kind of master file containing information about the individual chain files. As the foregoing are all **plain text files**, they can be easily read by programs in other languages, but since we are here in R Markdown we will use `coda::read.coda()`. It returns a list of class mcmc containing the samples and other information. You can see what is in that list by using `str()`.  
+
+```{r readSampleFiles}
+require("coda")
+## chain1, chain2 and chain3 will be objects of class mcmc
+## according to the help entry for coda::read.coda()
+chain1 <- read.coda(output.file = "CODAchain1.txt", # mcmc object
+                    index.file  = "CODAindex.txt" ,
+                    quiet = TRUE            )
+chain2 <- read.coda(output.file = "CODAchain2.txt", # mcmc object
+                    index.file  = "CODAindex.txt" ,
+                    quiet = TRUE            )
+chain3 <- read.coda(output.file = "CODAchain3.txt", # mcmc object
+                    index.file  = "CODAindex.txt" ,
+                    quiet = TRUE            )
+```  
+
+In this next chunk, I collect `chain1`, `chain2` and `chain3` into an object of class `mcmc.list` called `chains`. It could be called anything, but I am following Kruschke's naming conventions for things.  
+
+```{r create_mcmc.list}
+## chains will be an object of class mcmc.list
+chains <- as.mcmc.list(list(chain1,chain2,chain3))  # mcmc.list object
+```  
+
+## Summary table  
+
+Recall the generic R function `summary()`. Not surprisingly the coda package provides a _method_ for `summary()`. We don't have to remember the names of the methods `summary.mcmc()` and `summary.mcmc.list()` because `summary()` will find them automatically. The output from `summary()` is a list containing the element `statistics` and the element `quantiles`. Remember that to extract an element of a list we can use the selection operator `$`. Thus `summary(chains)$statistics` will be a matrix containing things like mean and standard deviation, and `summary(chains)$quantiles` will be a matrix of quantiles. (We don't have to memorize the foregoing; we can always use `str()` to find out what is inside any R object.)  
+
+We'll use `knitr::kable()` to print the summary, because the result is more attractive than that from `print()`.  
+
+```{r summaryStatistics}
+options(digits=3)
+  kable(summary(chains)$statistics, align="c", 
+        caption="**Table 1.** Summary statistics for the toy 
+        regression problem in the JAGS manual. The intercept alpha
+        is for centered data.")
+```  
+
+## Table of quantiles  
+In the following chunk I use `knitr::kable()` to print the table of quantiles.  
+
+```{r summaryQuantiles}
+options(digits=2)
+kable(summary(chains)$quantiles, align="c", caption="**Table 2.** Posterior quantiles for the toy regression problem in the JAGS manual. The intercept alpha is for centered data.")
+```  
+
+## Traceplots
+In the following chunk I use `coda::traceplot()` to make a traceplot of each chain. `traceplot()` knows what to do with an object of class `mcmc.list` such as `chains`; it makes a traceplot for each chain in `chains`.  
+
+```{r traceplots, fig.height=2, fig.cap="**Figure 2.** Traceplots of alpha, beta and sigma using coda::traceplot()."}
+par(mar=c(3,4,2,1), mgp=c(2,0.7,0), mfcol= c(1,3))
+traceplot(chains)
+```  
+
+## Density plots  
+In the following chunk I use `coda::densplot()` to plot the posterior PDF for each stochastic variable that was _monitored_ by JAGS. Remember we created that command file for JAGS containing lines such as `monitor alpha thin(2)`.  
+
+```{r densityplots, fig.height=2, fig.cap="**Figure 3.** Posterior pdfs of alpha, beta and sigma using coda::densplot()."}
+par(mar=c(3,4,2,1), mgp=c(2,0.7,0), mfcol= c(1,3))
+densplot(chains)  
+```
+
+## Auto- and cross-corr plots
+
+### Autocorr plots  
+
+This next chunk gives us autocorrelation plots for each monitored variable in each chain. They look rather good, as might be expected because of the thinning. Not to be tedious, I'm including only the results for the first chain. The function used is `coda::autocorr.plot()`, but the coda package was loaded above so I can just call `autocorr.plot()`. I often prepend the package name to a function call just to remind me what package it is in.  
+
+```{r autocorrelationPlots, fig.height=2, fig.cap="**Figure 4.** Autocorrelation plots using coda::autocorr.plot()."}
+par(mar=c(3,4,2,1),mgp=c(2,0.7,0), mfcol= c(1,3))
+# par(mar=c(3,4,2,1), mfcol= c(1,3))
+autocorr.plot(chain1, auto.layout=FALSE)
+```
+
+### Correlation matrix
+In the following chunk I use `kable(crosscorr(chains))` to print the cross correlations of the stochastic nodes monitored by JAGS.  
+
+```{r crossCorrelations}
+options(digits=3)
+kable(crosscorr(chains), 
+      caption="Cross-correlation values for the toy regression problem.")
+```
+
+### Crosscorr plot  
+In the following chunk I use `coda::crosscorr.plot()` to plot the cross correlations of the stochastic nodes monitored by JAGS. The plot is rather big and ugly. It is not hard to change the colors, but I haven't looked in the code for `crosscorr.plot()` to see how to shrink the figure or reduce the plot margins.   
+
+```{r crosscorrPLot, fig.cap="**Figure 5.** Cross-correlations of monitored variables using the function coda::crosscorr.plot(). Green is good because it means that the two variables aren't correlated."} 
+crosscorr.plot(chains)
+```  
+
+## Kruschke's utilities  
+
+### Kruschke's diagMCMC()
+
+The function `diagMCMC()` appears at around line 220 of the R-script `DBDA2E-utilities.R`. It depends on several of his other utility functions in that script, as well as a number of functions in the coda package. The function `varnames()` is also in the coda package; it returns the variable names for an argument of class `mcmc` or `mcmc.list`. Here we apply `diagMCMC()` to the samples of sigma computed above.  
+
+```{r usediagMCMC, fig.height=4, fig.align="left", fig.cap="**Figure 6.** Diagnostics for sigma using Kruscke's utility diagMCMC(). The lower left panel shows the shrink factor (Gelman-Rubin statistic, essentially a ratio of the within chains variance to the between chains variance; ideally it is close to 1), which isn't good here, but could be improved by taking more samples. Recall I suggested 400 samples per chain to make this exercise run fast."}
+diagMCMC( chains , parName=varnames(chains)[3] )
+```   
+
+### Kruschke's plotPost()  
+
+Kruschke's utility `plotPost()` starts around line 375 of `DBDA2E-utilities.R`. It is discussed in Section 8.2.5.1 (page 205) of our text. Here we apply it to `alpha`, `beta` and `sigma`.  
+
+```{r plotPost1, fig.height=2, fig.cap="**Figure 6.** Posterior densities for alpha, beta and sigma using Kruschke's utility plotPost()."}
+par(mar=c(3,4,2,1), mgp=c(2,0.7,0), mfcol= c(1,3))
+ppstAlpha  <- plotPost( chains[,"alpha"], main="alpha", xlim=c(1,5),
+                        xlab=bquote(alpha), cenTend="median")
+ppstBeta  <-plotPost( chains[,"beta"], main="beta", xlim=c(-1,2),
+                      xlab=bquote(beta), cenTend="median")
+ppstSigma <- plotPost( chains[,"sigma"], main="sigma", xlim=c(0,3.5),
+                       xlab=bquote(sigma), cenTend="median")
+```  
+## 13. Sensitivity to priors?  
+
+Recall that our prior for $\log(\sigma)$ was `dunif(-5,5)`, hence the support of $\sigma$ is the interval (`r round(exp(c(-5,5)),digits=3)`). If the posterior has any mass piled up near those boundaries then our results are biased by the prior, and we should expand the boundaries. However that is not the case here, so we may be confident that we have correctly implemented a true uninformative prior for $\sigma$. Notice also that the posteriors for $\alpha$ and $\beta$ have no mass piled up around the boundaries of their uniform prior support on $(-10,10)$. Thus we have utilized true uninformative priors for slope and intercept. These uniform priors would be **in**formative if we knew _a priori_ that they are positive or negative, but we don't.  
+
+## Credibility intervals  
+
+In the following chunk we use the samples to find a 95% equal-tailed credibility interval for the quantity $\alpha + \beta\,x$ for various values of $x$. We plot these credibility intervals with the data. In calculating these intervals it is necessary to recall that we centered the x-data in our JAGS model.  
+
+```{r posteriors, fig.height=4, fig.cap="**Figure 7.** 95% credibility intervals for a + bx."}
+xbar <- mean(x)
+samples <- as.matrix(chains) # get alpha, beta, sigma in matrix
+a <- samples[,"alpha"] # samples of intercept
+b <- samples[,"beta" ] # samples of slope
+nn <- length(a)        # number of samples
+xx <- seq(0.0, 6.0, by=0.25)    # x's for posterior credibility intervals
+nx <- length(xx)
+eti <- matrix(0,nrow=2,ncol=nx) # matrix of equal-tailed intervals
+jq1 <- floor(0.025*nn)          # index of  2.5 percentile
+jq2 <- ceiling(0.975*nn)        # index of 97.5 percentile
+for(ix in 1:nx) {
+  postmu <- a + b*(xx[ix] - xbar)
+  postmu <- sort(postmu)
+  eti[1,ix] <- postmu[jq1] # 2.5  percentile for a + bx
+  eti[2,ix] <- postmu[jq2] # 97.5 percentile for a + bx
+}
+## plot 95% posterior CI's for a + bx
+par(mar=c(4.1,4.1,1,2)) # margin control
+plot(x,y,type="b", lty=3, xlim=c(0.0, 6.0), ylim=c(-3.0, 8.0)) # data
+lines(x=xx, y=eti[1,], lty=2, col="red") # 2.5  percentile
+lines(x=xx, y=eti[2,], lty=2, col="red") # 97.5 percentile
+legend("topleft", pch=c(1, NA), 
+       col=c("black","red"), lty=c(3,2),
+       legend=c("data", "95% CI"), 
+       inset=0.05, bty="n")
+```  
+
+Well, that was only moderately painful. Let's see whether we can handle posterior predictive distributions.  
+
+## Predictive intervals    
+
+In order to check our model, we use our posterior distribution for the parameters to synthesize some data. Recall the _posterior predictive distribution_ explained in earlier assignments. If you cannot recall it, go back and read `Frazer_A8-GS.html` again.  
+
+(Ah, you are back so soon!) In this next chunk we calculate a 95% equal-tailed confidence interval for the posterior predicted data `ppy ~ dnorm(mean=a+b*x[i], sd=sigma)`, also known as a 95% equal-tailed prediction interval. The calculation is similar to the one above, except for the draws from the normal sampling distribution. As you will see, it would have been easy to combine the posterior predictive calculations with the posterior calculations.  
+
+```{r postpred, fig.height=4, fig.cap="**Figure 8.** 95% credibility intervals for the posteriors of a + bx, and for the posterior predictive distributions."}
+etpp <- matrix(0,nrow=2,ncol=nx) # storage
+for(ix in 1:nx){ # x's for prediction
+  postmu <- a + b*(xx[ix] - xbar) # means
+  sd <- samples[,"sigma"] # sd's
+  ppy <- rnorm(nn, mean=postmu, sd=sd) # post-pred samples of a+bx
+  ppy <- sort(ppy) # sort em to find the equal-tailed intervals
+  etpp[1,ix] <- ppy[jq1] #  2.5 percentile
+  etpp[2,ix] <- ppy[jq2] # 97.5 percentile
+}
+
+## plot everything 
+par(mar=c(4.1,4.1,1,2))
+plot(x,y,type="b", lty=3, xlim=c(0.0, 6.0), ylim=c(-3.0, 8.0))
+lines(x=xx, y= eti[1,], lty=2, col="red"    )
+lines(x=xx, y= eti[2,], lty=2, col="red"    )
+lines(x=xx, y=etpp[1,], lty=2, col="magenta")
+lines(x=xx, y=etpp[2,], lty=2, col="magenta")
+legend("topleft", inset=0.02, bty="n",
+       pch=c(1,NA,NA), 
+       col=c("black","red","magenta"), 
+       lty=c(3,2,2),
+       legend=c("data", "95% posterior CI", "95% posterior predictive CI")
+      )
+```  
+
+You might be wondering why the 95% C.I. is somewhat jagged and why the 95% P.I. for the posterior predictive is even more jagged. The 95% C.I. is somewhat jagged because outer quantiles, such as 0.025 and 0.975 are always more variable than inner quantiles, such as the median, because there are so few samples outside of them. The 95% P.I. is even more jagged because of the stochasticity of sigma, and because of the stochasticity associated with the draw from the normal. The easiest remedy for this jaggedness is simply to take more samples. Recall that the total number of samples taken above was 1200, 400 from each of three chains, which is only a tenth of what would be considered good for research. If you were to run all the above again with several thousand samples from each chain the C.I. and P.I. would be considerably smoother. (Recall the chunk above in which we create a model string and write it to the file `A9b-cmd`. In that string, you would change the line `update 800` to `update 5000` or something similar.)
+
+# Runjags  
+
+We now do the same problem as above, but much more conveniently because we do not have to pretend we are using a terminal, and we do not have to write any files.  
+
+## autorun.jags()  
+
+As it is often the easiest way to run an MCMC model, here is a demonstration of the function `runjags::autorun.jags()`. See Kruschke Section 8.7, page 215 for a discussion of the `runjags` package, which has the advantage over `rjags` of enabling chains to run in different processes on the multiple cores of your laptop. The only disadvantage to using `autorun.jags()` rather than `run.jags()` is that the former tries to protect you from yourself by taking more samples than are usually necessary.  
+
+To make sure we are on the same page as above, we'll run the same model exactly. Functions in the `runjags` package want the **model** in the form of a string, the **data** in the form of a list, and the **initial values** as either a function or list of lists, one list for each chain. (I can never remember stuff like that and have to look it up every time. Fortunately it isn't difficult to find in the help entry for `runjags`.)
+
+
+```{r usingAutorun.jags, results="hide"}
+require("runjags")
+x <- c(1,2,3,4,5)
+y <- c(1,3,3,3,5)
+data  <- list(x=x,y=y)
+inits <- # initial values for three chains
+  list(
+       inits1=list(alpha=1,beta=-1,logsigma=log(0.5)),
+       inits2=list(alpha=3,beta= 1,logsigma=log(1.0)),
+       inits3=list(alpha=5,beta= 3,logsigma=log(2.0))
+      )
+results <- 
+  autorun.jags(model=modelString,
+               data=data,
+               n.chains=3,
+               method="parallel",
+               inits=inits,
+               monitor=c("alpha","beta", "sigma")
+              )
+# If the above doesn't work, use failed.jags() without any arguments in the command window to get some suggestions.  
+cleanup.jags() # cleanup failed runs 
+```  
+
+### Extract samples  
+The function `autorun.jags()` creates an object of class `runjags`, which is a special type of list that has a lot of stuff in it. (Use `str()` to see what is there.) Anyway, the first component of a runjags object is an object of class `mcmc.list`, and since our runjags object is called `results`, we can get the samples by typing `results$mcmc`.  
+
+```{r extractSamples}
+chains <- results$mcmc # an mcmc.list object
+#class(chains) # mcmc.list
+```   
+
+### Kruschke diagnostics again  
+
+As we have already looked at the diagnostics above, we'll confine ourselves here to sigma, the third variable that we told JAGS to monitor. We'll plot it using his `diagMCMC()` utility.   
+
+```{r lookAtSigma, fig.height=4, fig.cap="**Figure 9.** Diagnostics for sigma using diagMCMC() and samples from autorun.jags()."}
+diagMCMC( chains , parName=varnames(chains)[3] )
+```   
+
+In this next chunk we use Kruschke's `plotPost()`.  
+
+```{r sigmaUsingPlotPost, fig.align="left", fig.height=2, fig.cap="**Figure 10.** Posterior pdfs using Kruschke's plotPost() function with samples generated using the runjags package. The results are more accurate those in Figure 6 because autorun.jags() decides for itself how many samples to generate, and it generated more samples than we used above running stand-alone."}
+par(mar=c(3,4,2,1), mgp=c(2,0.7,0), mfcol= c(1,3))
+ppst1 <- plotPost( chains[,"alpha"], main="alpha", xlim=c(1,5),
+                   xlab=bquote(alpha), cenTend="median")
+ppst2 <- plotPost( chains[,"beta"], main="beta", xlim=c(-1,2),
+                   xlab=bquote(beta), cenTend="median")
+ppst3 <- plotPost( chains[,"sigma"], main="sigma", xlim=c(0,3.5),
+                   xlab=bquote(sigma), cenTend="median")
+```
+
+## Diagnostics in runjags  
+
+Recall that the value returned by `auto.runjags()` was saved in `results`, which, not surprisingly, is an object of class `runjags`. The print method for objects of class `runjags` gives you a nice summary. I'm not attempting to make it into a nice table here, although there must be a way to do that.  
+
+```{r runjagsResults}
+options(digits=3)
+print(results)
+```   
+
+There is also a `plot()` method for objects of class runjags. It's a nice quick way to get many of the plots we made above in one big multipanel figure. 
+
+```{r runjagsPlot, fig.height=9, results="hide", fig.width=10, fig.cap="**Figure 11.** Demonstrating the plot() method for objects of class runjags."}
+plot(results, layout=c(4,4))
+```  
+
+# Conclusions    
+
+It is strange to be deploying JAGS on such simple problems as this, but our experiments with simple problems can be used as templates for more complex problems. One of the things I hope you learned from this example is that it is easier to use functions in the `runjags` package than to run JAGS in command-line mode, i.e., from a terminal, or in batch mode from a terminal as we did above. Some research problems have very large datasets and hundreds of variables, and for those you should probably utilize command line mode, as it allows you to add more samples without having to start over. Once you get used to it, it isn't difficult. However, for the toy problems of this course, functions like `autorun.jags()` are more convenient.  

@@ -1,0 +1,1245 @@
+---
+title: "Frazer_A8-GS_V2"
+author: "Neil Frazer"
+date: "2020-04-05"
+output: 
+  html_document: 
+    theme: readable #paper #cosmo #journal #cerulean
+    toc: true
+    smooth_scroll: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---  
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 13px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.math{ font-size: 10pt;}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px;
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px;
+}
+pre{/*preformatted text*/ 
+    font-size: 12px;
+}
+p.caption {/* figure captions */ 
+    font-size: 1.0em;
+    font-style: italic; 
+} 
+</style>
+
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+library(knitr)
+library(coda)
+library(metRology, quietly=TRUE, warn.conflicts=FALSE)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  ",
+               #echo=FALSE,
+               cache=TRUE,
+               autodep=TRUE,
+               eval.after="fig.cap",
+               collapse=TRUE, 
+               dev="png",
+               fig.width=7.0,
+               out.width="95%",
+               fig.asp=0.9/gr,
+               fig.align="center"
+               )
+colorize <- function(x, color) {
+  if (knitr::is_latex_output()) {
+    sprintf("\\textcolor{%s}{%s}", color, x)
+  } else if (knitr::is_html_output()) {
+    sprintf("<span style='color: %s;'>%s</span>", color, x)
+  } else x
+}
+```  
+
+# Notes {-}  
+
+- The due date for this assignment, `A8-GS`, is Sunday April 5. It is a natural sequel to `A-Metrop`, which some of you have already completed. 
+
+- In order that it not take too long, I am sending you this html and a companion Rmd named `A8-GS_fixme.Rmd`. The only parts you have to write for yourself are the parts that update `b`, `lnsx` and `lnsy`. (Sections 6.3, 6.4 and 6.5, respectively.) Re-create those parts and check that the resulting knit looks like this html. Don't forget to rename your file as `(yourname)_A8-GS.Rmd`.   
+
+- There is quite a bit of new material on posterior prediction for model checking and for extrapolation. Please take the time to read it carefully, as it is the type of material you may need for your own research.  
+
+- In order to be self-contained, Sections 1-4 from `A8-Metrop` are included here. Starting in Section 5, most of the material is new.       
+
+- There is an appendix at the end that I commented out because I suspected that the big LaTeX equation there was slowing `pandoc`, the program that converts the Markdown file to html. (It could be something else.) If you are interested in the math, you can uncomment it quickly by clicking on the pull-down `code` menu and selecting `comment/uncomment lines`.     
+
+- In the setup chunk above there is a function `colorize()` that makes it more convenient to color text in R Markdown narrative. It is from Yihui Xie's [R Markdown Cookbook](https://bookdown.org/yihui/rmarkdown-cookbook/).  
+
+# Introduction {-} 
+
+This assignment treats _robust_ linear regression with _errors in variables_, a problem that is common in science and does not involve coins. Robustness and errors-in-variables are difficult for conventional methods, but easy for Bayesian methods. **Your assignment is** to code **either** Metropolis **or** the Gibbs sampler, then analyze the data with your code. 
+
+This assignment is relevant to Chao's research, in which pressure, density and seismic soundspeeds are measured in diamond anvil cells and then extrapolated to great depth in the earth using the second order [Birch-Murnaghan equation of state](https://en.wikipedia.org/wiki/Birch%E2%80%93Murnaghan_equation_of_state). The outstanding question is whether such extrapolations agree with the PREM model for soundspeeds and density.  
+
+It is also relevant to Andrew's research, in which estimates of seamount age and location in various island chains are used to estimate the absolute motion of the [Pacific plate](https://en.wikipedia.org/wiki/Plate_tectonics).    
+
+In the following I often mix code-type notation with math notation, in order to remind you of distribution names and suggest names for variables in your codes. Beware that on some screens it is easy to mistake the tilde `~` for a minus sign. The tilde is how mathematicians, as well as the MCMC languages [BUGS](https://en.wikipedia.org/wiki/OpenBUGS), [JAGS](https://en.wikipedia.org/wiki/Just_another_Gibbs_sampler) and [Stan](https://en.wikipedia.org/wiki/Stan_(software)), indicate that the variable on the left is a sample from the distribution on the right.    
+
+**We have data** `xo[i]`, `yo[i]`, `i=1:N`. The lower case "o" in these names is a reminder that these are _observed_ values, not the true values, `x[i], y[i]`, which are unknown because our measurement systems are imperfect. In the narrative I may use $x_o$ to mean the vector $(x^{(o)}_1, x^{(o)}_2, \ldots, x^{(o)}_N)$. 
+
+Our **process model** is the usual `y[i] = a*x[i] + b`. Notice that it involves the unknown true values of `x`, not the observed values `xo`. The slope `a` and intercept `b` are the only two parameters of our process model. It would be easy to have a more complicated process model with more parameters, but the process model is not our focus here. Our complete MCMC model includes the unknown x-values as variables/parameters.  
+
+Our **x-observations** come from a device that we believe has a normal distribution of errors, so our observation model for the x-values is `xo[i] ~ dnorm(mean=x[i], sd=sx)`. In mathematical notation that would be $x^{(o)}_i \sim N(x_i,\sigma_x^2)$. In other words the observation `xo[i]` is assumed to be a draw from a normal distribution with mean `x[i]` and standard deviation `sx`. In statistics, the notation $s_x$ would be reserved for sample SD, and population or distribution SD would be denoted by $\sigma_x$. I am too lazy to type `sigma_x` everywhere in my code, so I using `sx`.   
+
+We suspect that some of our **y-observations** are _outliers_, hence our observation model for the y-values is a Student t-distribution `yo[i] ~ dt(mean=y[i], df=nu, sd=sy)` in which `nu` is the _normality_, more often referred to as the _degrees of freedom_. We use the t-distribution instead of the normal because it is [fat-tailed](https://en.wikipedia.org/wiki/Fat-tailed_distribution) compared to the normal and thus more tolerant of outliers. The [double-exponential (Laplace)](https://en.wikipedia.org/wiki/Laplace_distribution) is another JAGS-supplied distribution with fat tails that you may find useful someday.  
+
+Kruschke (Section 16.2, page 458) gives a nice explanation of the t-distribution, noting that $\nu$ (Greek nu) cannot be less than 1 and that the t-distribution becomes the normal distribution in the limit as $\nu\rightarrow \infty$. Please read the entry for the Student t-distribution on page 48 of the [JAGS 4.3.0 User Manual](https://sourceforge.net/projects/mcmc-jags/files/Manuals/4.x/), noting that _k_ is used there instead of $nu$ to denote the normality parameter.  
+
+# JAGS    
+We are going to write our own MCMC code for this problem, but writing a JAGS model first may help to clarify our thinking, as well as making us appreciate the simplicity of JAGS. Some things to note about the JAGS language: (1) JAGS uses C-style commenting, in which comments have the form `/* comment */`. (2) JAGS is a [declarative language](https://en.wikipedia.org/wiki/Declarative_programming) so the order of the statements in a JAGS model does not matter. (Statement order _does_ matter in Stan.) (3) JAGS parameterizes the normal and t-distributions using precision $\tau=1/\sigma^2$ instead of standard deviation. Here is the model in exactly the form we would give to JAGS:  
+
+```
+model {
+  for (i in 1:N) { /* observe x's and y's */
+    xo[i] ~ dnorm(x[i], 1/(sx*sx))
+    yo[i] ~ dt(y[i], 1/(sy*sy), nu)
+  }
+  
+  for (i in 1:N) { /* deterministic process model */
+    y[i] <- a*x[i] + b
+  }
+  
+  for (i in 1:N) { /* priors for x's */
+    x[i] ~ dunif(xmin[i], xmax[i])
+  }
+  
+  /* more priors */
+  a    ~ dunif(amin, amax)
+  b    ~ dunif(bmin, bmax)
+  lnsx ~ dunif(lnsxmin,  lnsxmax)
+  lnsy ~ dunif(lnsymin,  lnsymax)
+  
+  /* more deterministic variables */
+  sx  <- exp(lnsx)
+  sy  <- exp(lnsy)
+}
+```  
+
+For clarity I wrote the JAGS model using three loops instead of one. This does not cause a loss of efficiency because JAGS doesn't _execute_ the statements in the model; rather it uses them to build a [Bayesian network](https://en.wikipedia.org/wiki/Bayesian_network), sometimes known as a _probabilistic directed acyclic graph_ (DAG). Our textbook has many DAG diagrams: for example, Figure 9.7 on page 236 and Figure 17.2 on page 480. A DAG diagram is always helpful, but for non-hierarchical problems like this one I find that if I carefully scrutinize my JAGS model, I do not need to sketch the DAG for it first.   
+
+Notice in the JAGS model that I used uniform priors for the x's, the slope, and the intercept. If I had prior information that the slope was positive I would have used the reciprocal prior. I do _not_ specify priors for the unknown y's because they are determined by the x's, slope and intercept. By using uniform priors for $\ln(s_x)$ and $\ln(s_y)$ I effectively get exact reciprocal priors for $s_x$ and $s_y$. Kruschke would have used `dgamma(0.001, 0.001)` as the prior for $s_x$ and $s_y$, and the interval-scale variables $\ln\sigma_x$ and $\ln\sigma_y$ would not be present in his analysis.  
+
+Notice also in the JAGS model that the normality $\nu$ is a fixed parameter. In your analysis I suggest you fix it at 2. The normality parameter is difficult to resolve unless one has a lot of data because it (jargon alert) _trades off_ with $\sigma_y$. Making $\nu$ smaller gives the t-distribution longer tails, but making $\sigma_y$ larger also gives it longer tails.   
+
+Our textbook does robust linear regression in Section 17.2 (page 479), but it assumes known values of $x$, and it treats the normality $\nu$ and precision $1/\sigma_y^2$ as parameters.  
+
+# Synthetic data  
+Before trying any new code on real data one should always try it first on synthetic data, or simulated data as it is called in the social and life sciences. In the following chunk I synthesize a data set with outliers in the y-observations. The plot shows the fit of the data with `lm()`, which is a least-squares fit. `lm()` assumes that the x's are exactly known and that the errors in y are normally distributed.      
+
+```{r synthetics, fig.cap=fig.cap}
+par(mar=c(4, 4, 1, 1),
+    mgp=c(2.5, 1, 0),
+    bg="grey97")
+#set.seed(seed=5, kind="Mersenne-Twister")
+set.seed(seed=9, kind="Mersenne-Twister") 
+N <- 20     # number of data pairs
+a <- 1.0    # slope
+b <- 1.0    # intercept 
+
+if (c(TRUE, FALSE)[1]) { # hard test
+  x  <- runif(N, min=2.0, max=7.0)
+  x  <- sort(x) # x values
+  sx  <- 0.2    # SDx
+  sy  <- 0.2    # SDy
+   r  <- 0.2    # prevalence of y-outliers
+  sy1 <- 3.0    # SD for y-outliers
+} else {  # easy test
+  x   <- seq(from=1, to=10, length.out=N)
+  sx  <- 0.1
+  sy  <- 0.1    # SDy
+   r  <- 0.1    # prevalence of y-outliers
+  sy1 <- 0.1
+}
+y <- a*x + b # y values
+
+## save some stuff for later
+xt <- x 
+yt <- y 
+at <- a
+bt <- b
+
+xo <- rnorm(N, mean=x, sd=sx) # observe x's
+yo <- rnorm(N, mean=y, sd=sy) # observe y's
+xo <- xo[order(xo)]
+yo <- yo[order(xo)]
+
+## make y-outliers
+ii <- # indices of the yo to be overwritten
+  sample(1:N, size=round(r*N), replace=FALSE)
+yo[ii] <- # outliers
+  rnorm(length(ii), mean=y[ii], sd=sy1)
+
+## lm() fit
+fit <- lm(yo ~ xo)
+alm <- coef(fit)[2]; blm <- coef(fit)[1]
+## plot data, true model and lm() fit
+plot(xo, yo, bty="l", panel.first=grid(),
+     xlab="x", ylab="y", xaxs="i", yaxs="i",
+     xlim=range(xo)+c(-1,1), ylim=range(yo)+c(-1,1))
+lines(x=c(0,11), y=a*c(0,11)+b, col="black")
+abline(fit, col="red")
+leg2 <- paste0("true model: a=", signif(a,2), ", ", 
+               "b=", signif(  b,2) )
+leg3 <- paste0("lm() fit: a=", signif(alm,2), ", ", 
+               "b=", signif(blm,2) )
+legend("bottomright", bty="o", box.col="gray50",
+       title=expression(italic(y==ax+b)),
+       inset=c(0.05, 0.05),
+       legend=c("data", leg2, leg3),
+       lty=c(NA, 1, 1), pch=c(1, NA, NA),
+       col=c("black", "black", "red"))
+fig.cap <- paste0("**Figure 1.** Synthetic data for a linear regression 
+                  problem with y-outliers and errors in x-values. ", 
+                  "There are ", N, " x-y pairs in the dataset. ",
+                  "The x-values have SD =", sx, " and the y-values
+                  have SD =", sy, " except that ", length(ii), 
+                  " of the y-values are outliers with SD =", sy1,
+                  ". However, as data analysts, we cannot know which
+                  points are outliers, or even whether outliers
+                  exist in the data. All we know is that our x-meter is 
+                  reliable (if not perfectly accurate) but that our 
+                  y-meter has occasional glitches. Under these circumstances 
+                  the best we can do is use a model that is robust 
+                  to y-value outliers.")
+```  
+
+Outliers can wreak havoc on the least-squares model in `lm()`, and indeed you can see from the plot how two points that could be outliers have pulled the best-fit `lm()` line away from the true model. If you look in the code above you will see that there are actually `r length(ii)` outliers, but only two are easily guessed at. Be aware that including the true model on the plot makes you think that you could easily guess which points are outliers, and exclude them. If I had left off the true model you would have a much more difficult time guessing, and the `lm()` fit would look quite reasonable.  
+
+# Centering data  
+Most regression software _centers_ and _scales_ regression data before analyzing it, and so should yours. Why is that? Notice in Figure 1 that if the slope increases a bit the intercept will decrease a bit. The parameters $a$ and $b$ will thus be (anti) correlated and the effective sample size of your MCMC samples will be reduced. In the problem of this assignment it is sufficient to center the x-values: `xoc <- xo - mean(xo)`. To see the posterior effect of this consider our process model in the form  
+
+$$\begin{align}
+y 
+&= a\cdot x + b \\
+&= a\cdot[x_c + {\rm mean}(x^{(o)})] + b \\
+&= a\cdot x_c + [b+a\cdot {\rm mean}(x^{(o)})]\\
+&= a\cdot x_c + b_c
+\end{align}$$  
+
+When we have finished sampling, we will have samples `a[j]` and `bc[j]` for `j=1,2,...,Ns` and the true intercept sample `b[j]` is given by `b[j] = bc[j] - a[j]*mean(xo)`.  
+
+# Mathematical model  
+
+You may want to skip the math of this section on first reading, but please look at the result, equation (6*).  
+
+I am including the deterministic variables $y$, $\sigma_x$, and $\sigma_y$ as part of the mathematical model below, because I think it is good for you to see how they are handled, and Kruschke does not cover this aspect of things.  
+
+As we intend to write our own MCMC code for this problem we now put JAGS aside and lay out the mathematical model in the canonical form $p(\beta\mid D) p(D) = p(D\mid \beta) p(\beta)$. In our application the data vector is $D=(x_o,y_o)$ and the parameter vector is $\beta=(x,y,a,b,\sigma_x,\sigma_y, e^{\ln\sigma_x}, e^{\ln \sigma_y}, \nu)$. Notice that we included _every_ parameter that appeared above in the model. In order to avoid mistakes we begin as usual with a tautology for the joint distribution of parameters and data:  
+
+$$\begin{align}
+\rm{LHS} &= \rm{RHS} \\
+p(a,b,x,y,\sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, x_o, y_o \mid \nu) 
+&= 
+p(a,b,x,y,\sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, x_o, y_o \mid \nu),
+\end{align} \tag{1}$$  
+
+in which $x, x_o, y$ and $y_o$ are all `r N`-element vectors. Notice that the normality $\nu$ appears to the right of the given symbol `|` because we are _specifying_ $\nu$, not trying to find it from the data.  
+
+We rework the RHS by repeated use of the product rule and independence (if you aren't entirely confident with those concepts see the appendix) obtaining  
+
+$$\begin{align}
+{\rm RHS} &=
+p(y_o\mid y, \sigma_y, \nu)\,p(y \mid x, a, b)\,p(\sigma_y \mid \ln\sigma_y)
+\ p(\ln \sigma_y)\\
+&\times
+p(x_o\mid x, \sigma_x)\ p(\sigma_x \mid \ln\sigma_x) \tag{2a}
+\ p(\ln \sigma_x)\\
+&\times
+ p(x)\, p(a)\, p(b) \\ \\
+&={\rm dt}(y_o\mid y, \sigma_y, \nu)\, \delta(y-ax-b)\, 
+\delta(\sigma_y-e^{\ln \sigma_y})
+\, {\rm dunif}(\ln \sigma_y)\\
+&\times {\rm dnorm}(x_0\mid x, \sigma_x)\, \delta(\sigma_x-e^{\ln \sigma_x})
+\, {\rm dunif}(\ln \sigma_x) \tag{2b}\\
+&\times {\rm dunif}(x)\, {\rm dunif}(a)\, 
+{\rm dunif}(b).
+\end{align}$$  
+
+A mathematician would have written $N()$ instead of `dnorm()`, and $U()$ instead of `dunif()`, but I am mixing in coding notation as a way of thinking ahead to how the code will eventually be written.   
+
+Notice that in equation (2b) I made use of the [Dirac delta function](https://en.wikipedia.org/wiki/Dirac_delta_function) $\delta()$ to handle the deterministic variables. Paul Dirac, the physicist who was a close second to Einstein for brilliance, casually introduced his delta function in a quantum mechanics textbook, and mathematicians had their drawers in knots for a decade until they invented the theory of [generalized functions](https://en.wikipedia.org/wiki/Generalized_function) to deal with it. All we need to know is that $\delta(x-a)$ is a PDF with all of its probability mass concentrated at the single point $x=a$, and thus for any well-behaved function $f(x)$ the expectation of $f$ under the delta PDF is $E(f)=\int\! \delta(x-a)\,f(x)\,dx=f(a)$.  
+
+In our application, the process model $y=ax+b$ is assumed to be exact, hence $p(y\mid x,a,b)=\delta(y-ax-b)$, both sides being regarded as functions of $y$. Also, since $\sigma_x$ is exactly equal to $\exp(\ln x)$ it follows that $p(\sigma_x\mid \ln \sigma_x)=\delta(\sigma_x-e^{\ln x})$, and similarly for $\sigma_y$.
+
+Integrating the RHS over the deterministic variables gives  
+
+$$\begin{align}
+\small\int\! dy\ d\sigma_x \, d\sigma_y\ ({\rm RHS})
+&={\rm dt}(y_o\mid a+bx, e^{\ln \sigma_y}, \nu) 
+\, {\rm dunif}(\ln \sigma_y)\\
+&\times {\rm dnorm}(x_0\mid x, e^{\ln \sigma_x})
+\, {\rm dunif}(\ln \sigma_x) \tag{3}\\
+&\times {\rm dunif}(x)\, {\rm dunif}(a)\, {\rm dunif}(b).
+\end{align}$$  
+
+Next we turn our attention to the left hand side of equation (1) and use the product rule to write it as a posterior distribution for the parameters times a prior predictive distribution for the data. After several applications of the product rule, and noting the independence of some variables from other variables we obtain  
+
+$$\begin{align}
+\rm{LHS} &=
+p(y\mid x,a,b)\, p(\sigma_x\mid\ln\sigma_x)\, p(\sigma_y\mid\ln\sigma_y)\\
+&\times p(x, a, b, \ln\sigma_x, \ln\sigma_y \mid x_o, y_o, \nu) \tag{4a} \\ 
+&\times p(x_0, y_0\mid\nu)\\
+\\
+&= \delta(y - ax - b)\, \delta(\sigma_x - e^{\ln\sigma_x})\,
+\delta(\sigma_y - e^{\ln\sigma_y}) \\
+&\times p(x, a, b, \ln\sigma_x, \ln\sigma_y \mid x_o, y_o, \nu)\tag{4b} \\
+&\times p(x_0, y_0\mid\nu) 
+\end{align}$$  
+
+As we did above for the RHS, we integrate the LHS over the deterministic variables $y$, $\sigma_x$ and $\sigma_y$ and obtain  
+
+$$\begin{align}
+\small\int\! dy\ d\sigma_x \, d\sigma_y\ ({\rm LHS})
+&= p(x, a, b, \ln\sigma_x, \ln\sigma_y \mid x_o, y_o, \nu)\, 
+p(x_0, y_0\mid\nu). \tag{5}
+\end{align}$$  
+
+Notice that each of the delta functions in the first line of (4b) integrates to 1, and there is no replacement in the second line of (4b) because neither $y$, nor $\sigma_x$, nor $\sigma_y$ is present there.
+
+The first factor in (5) is the posterior, and the second factor, $p(x_o,y_o\mid\nu)$, is the prior predictive. Setting the integrated RHS equal to the integrated LHS and dividing by the prior predictive gets us home: 
+
+$$\begin{align}
+p(x, a, b, \ln\sigma_x, \ln\sigma_y \mid x_o, y_o, \nu)
+&\propto 
+{\rm dt}(y_o\mid a+bx, e^{\ln \sigma_y}, \nu) 
+\, {\rm dunif}(\ln \sigma_y)\\
+&\times {\rm dnorm}(x_0\mid x, e^{\ln \sigma_x})
+\, {\rm dunif}(\ln \sigma_x) \tag{6*}\\
+&\times {\rm dunif}(x)\, {\rm dunif}(a)\, {\rm dunif}(b).
+\end{align}$$  
+
+The derivation above was somewhat tedious because we used the variables $\ln\sigma_x$ and $\ln\sigma_y$ instead of $\sigma_x$ and $\sigma_y$, respectively. If this exercise were in our textbook the variables $\sigma_x$ and $\sigma_y$ would have been used and the final result would have been  
+
+$$\begin{align}
+p(x, a, b, \sigma_x, \sigma_y \mid x_o, y_o, \nu)
+&\propto 
+{\rm dt}(y_o\mid a+bx, \sigma_y, \nu) 
+\, {\rm dgamma}(\sigma_y\mid 0.001, 0.001)\\
+&\times {\rm dnorm}(x_0\mid x, \sigma_x)
+\, {\rm dgamma}(\sigma_x\mid 0.001,0.001) \tag{7}\\
+&\times {\rm dunif}(x)\, {\rm dunif}(a)\, {\rm dunif}(b).
+\end{align}$$  
+
+Recall that the gamma density with very small shape parameters is a proper approximation of the reciprocal density. The kernel of the gamma is $\sigma^{\alpha-1}e^{-\beta\sigma}$ so you can see that as $\alpha$ and $\beta$ approach zero the gamma behaves like $\sigma^{-1}$. Remember $e^0=1$.     
+
+# The likelihood    
+
+As all our priors are uniform our posterior is proportional to the likelihood on the [support](https://en.wikipedia.org/wiki/Support_(mathematics)) of those priors. Denoting the likelihood by $L$ we write:       
+
+$$
+L(x, a, b, \ln\sigma_x, \ln\sigma_y \mid x_o, y_o, \nu) =\\
+\prod_{i=1}^N {\rm dt}(y^{(o)}_i \mid ax_i + b, e^{\ln\sigma_y}, \nu)
+\cdot {\rm dnorm}(x^{(o)}_i \mid x_i, e^{\ln\sigma_x}). \tag{8}
+$$  
+
+We need a shifted and scaled t-distribution, which we can get by calling the base function `dt` like this: `dt((x-mean)/sd, df, log)/sd`. To save typing, and avoid the errors that tend to creep into repetitive code, we create a function called `dts()` in the following chunk:  
+
+```{r dts}
+dts <- function(x, mean=0, logsd=0, sd=exp(logsd), df=2, log=FALSE) {
+  if(log) {
+    dt((x-mean)/sd, df=df, log=TRUE) - logsd
+  } else {
+    dt((x-mean)/sd, df=df, log=FALSE)/sd
+  }
+}
+```  
+
+Notice that equation (8) is the product of many small quantities, hence numerical underflows are likely to occur. To prevent them, calculate the log-likelihood (log-posterior) first, then exponentiate it. In other words calculate:    
+
+$$
+\exp\sum_{i=1}^N \big[ \ln{\rm dt}(y^{(o)}_i \mid ax_i + b, e^{\ln\sigma_y}, \nu)
++ \ln{\rm dnorm}(x^{(o)}_i \mid x_i, e^{\ln\sigma_x})\big]. \tag{9}
+$$  
+
+# Gibbs sampler  
+
+Recall that with the Gibbs sampler there is no proposal distribution; we simply visit each parameter in sequence to _update_ it. (More on that in a moment.) When we have updated each parameter---a complete cycle of such visits is called a _sweep_---the vector of updated parameters is our new sample. Rinse and repeat, as they say.  
+
+The Gibbs sampler can be more efficient than Metropolis for many problems because it never gets stuck. Every new sample is accepted. Also, when we update a parameter we do not need to consider the entire posterior, only the factors in the posterior that involve that particular parameter.^[At this point experts tend to talk about Bayesian networks, Markov blankets, co-parents and children, but none of that theoretical folderol is necessary. I mention it only to warn you.] Think of our posterior as a density cloud in a `r N+4` dimensional space. We update $x_1$ say, by looking along a line in the $x_1$-direction, calculating the value of our posterior along that line. Only $x_1$ is changing, so it's a _conditional posterior_, conditioned on the fixed values of all the other parameters). We draw a new value of $x_1$ from that 1-D conditional posterior, update $x_1$ to the new value and then move on to $x_2$, and so forth until we have updated all of `x[N]`, `a`, `b`, `lnsx`, and `lnsy`. The updated values are our new sample from the full `r N+4` dimensional posterior. The order in which we update the parameters does not matter.  
+
+You can see from the procedure just outlined that we are going to need a function `draw1()` that draws a single sample from an unscaled 1-D density. Here it is, and please notice that it is remarkably similar to the `rmb()` that you wrote in A6, and the 1-D Gibbs sampler that you wrote in A7, Exercise 7.5.        
+
+```{r draw1}
+draw1 <- function(q,d) {
+  ## No argument checking!
+  # The q's are the x-values and the d's are the y-values.
+  Nq <- length(q)
+  
+  ## make CDF p from density d
+  p <- cumsum(diff(q)*0.5*(d[-1] + d[-Nq]))
+  p <- c(0, p)
+  p <- p/p[Nq] # piecewise linear CDF
+  
+  ## take one sample using interpolation
+  u <- runif(1)
+  ip1 <- sum(p<=u) # position of largest  p <= u
+  ip2 <- ip1 + 1  # position of smallest p > u
+  
+  q[ip1] + 
+    (u - p[ip1])/(p[ip2] - p[ip1])*(q[ip2] - q[ip1])
+}
+```  
+
+## Update x's  
+
+As noted above, to update $x_1$ we draw a sample from the conditional posterior, $f(x_1)$ say, obtained from the posterior by discarding any factor that does not involve $x_1$. (Those factors remain constant when only $x_1$ is changing.)  Here is is necessary to include the prior for $x_1$ because we will need to integrate $f(x_1)$, and we cannot integrate numerically over an infinite interval.   
+
+$$\begin{align}
+f(x_1)&={\rm dt}(y^{(o)}_1 \mid a x_1 + b, e^{\ln\sigma_y} ,\, \nu) \\
+&\times {\rm dnorm}(x^{(o)}_1 \mid x_1, e^{\ln\sigma_x})\,\cdot\, 
+{\rm dunif}(x_1 \mid x_1^{\rm min}, x_1^{\rm max}) \tag{10}
+\end{align}$$  
+
+Here is the code to update `x[id]` for any `id`.  
+
+```{r newX}
+newX <- function(id) {
+  ## argument
+  ## id, the data index. 
+
+  ## from the calling environment we have the
+  ## parameters of the uniform prior for x[id], i.e.,
+  ## xmin[id], the minimum value of x[id]
+  ## xmax[id], the maximum value of x[id]
+  ## Nq, the number of points for the PDF
+  ## j, the current sample number <------- NB
+  ## nu, the normality
+  ## xo[id], yo[id], the data
+  ## current values a[j], b[j], lnsx[j], lnsy[j]
+
+  q <- # q's for the piecwise linear CDF 
+    seq(xmin[id], xmax[id], length.out=Nq) 
+
+  d <- exp( # unscaled density
+    dts(yo[id], mean=a[j]*q + b[j], logsd=lnsy[j], 
+                df=nu, log=TRUE) +
+    dnorm(q, mean=xo[id], sd=exp(lnsx[j]), log=TRUE))
+  
+  X[j+1, id] <<- draw1(q,d) # update x[id]
+  return(invisible(NULL))
+}
+```  
+
+## Update a  
+
+Only the y's depend on `a`, so we can discard the factors in the likelihood (9) that depend only on the x's. The result is 
+
+$$
+f(a) = {\rm dunif}(a\mid a^{\rm min},a^{\rm max})\exp\sum_{i=1}^N  \ln{\rm dt}(y^{(o)}_i \mid ax_i + b, 
+       e^{\ln\sigma_y}, \nu) \tag{12}
+$$  
+
+Here is a function to take a sample from $f(a)$. Notice the similarity to `newX()` defined above. Notice that we use the updated values of $x$.    
+
+```{r newa}
+newa <- function() {
+  
+  q <- # q's for the piecwise linear CDF 
+    seq(amin, amax, length.out=Nq) 
+
+  ## make piecewise linear density d
+  sumlog <- double(Nq)  
+  for (kd in 1:N) {     # loop over data
+    sumlog <- sumlog + 
+      dts(yo[kd], mean=q*X[j+1,kd] + b[j], logsd=lnsy[j], 
+          df=nu, log=TRUE)
+  }
+  d <- exp(sumlog) # piecewise linear density
+  
+  a[j+1] <<- draw1(q,d) # update a
+  return(invisible(NULL))
+}
+```  
+
+## Update b  
+
+The function to update `b` is similar to the one that updates `a` because `a` and `b` occur in the same part of the likelihood.  
+
+$$
+f(b) = {\rm dunif}(b\mid b^{\rm min},b^{\rm max})\exp\sum_{i=1}^N  \ln{\rm dt}(y^{(o)}_i \mid ax_i + b, 
+       e^{\ln\sigma_y}, \nu) \tag{13}
+$$ 
+
+Notice in the following chunk that we use the updated values of `x` and `a`.    
+
+```{r newb}
+newb <- function() {
+
+  q <- # q's for the piecwise linear CDF 
+    seq(bmin, bmax, length.out=Nq) 
+
+  ## make piecewise linear density d
+  sumlog <- double(Nq) 
+  for (kd in 1:N) {    # loop over data
+    sumlog <- sumlog + 
+      dts(yo[kd], mean=a[j+1]*X[j+1,kd] + q, logsd=lnsy[j], 
+          df=nu, log=TRUE)
+  }
+  d <- exp(sumlog) # piecwise linear density
+  
+  b[j+1] <<-  draw1(q,d) # update b
+  return(invisible(NULL))
+}
+```  
+## Update lnsy  
+
+The function to update `lnsy` goes like this.  
+
+$$
+f(\ln\sigma_y) = {\rm dunif}(\ln\sigma_y\mid \ln\sigma_y^{\rm min},\ln\sigma_y^{\rm max})\exp\sum_{i=1}^N  \ln{\rm dt}(y^{(o)}_i \mid ax_i + b, 
+       e^{\ln\sigma_y}, \nu) \tag{13}
+$$ 
+
+In the following chunk, notice that we use the updated values of `x`, `a` and `b`.     
+
+```{r, newlnsy}  
+newlnsy <- function() {
+
+  q <- # q's for the piecwise linear CDF 
+    seq(lnsymin, lnsymax, length.out=Nq) 
+
+  ## make piecewise linear density d
+  sumlog <- double(Nq) 
+  for (kd in 1:N) {    # loop over data
+    sumlog <- sumlog + 
+              dts(yo[kd], mean=a[j+1]*X[j+1,kd] + b[j+1], logsd=q, 
+                        df=nu, log=TRUE)
+  }
+  d <- exp(sumlog) # piecwise linear density
+  
+  lnsy[j+1] <<-  draw1(q,d) # update lnsy
+  return(invisible(NULL))
+}
+```  
+## Update lnsx
+The function to update `lnsx` goes like this. 
+
+$$
+f(\ln\sigma_x) = {\rm dunif}(\ln\sigma_x\mid \ln\sigma_x^{\rm min},\ln\sigma_x^{\rm max})\exp\sum_{i=1}^N  \ln{\rm dnorm}(x^{(o)}_i \mid x_i, 
+       e^{\ln\sigma_x}) \tag{14}
+$$ 
+
+Notice that in the following chunk we use the updated values of `x`, `a`, `b` and `lnsy`.    
+
+```{r newlnsx}  
+newlnsx <- function() {
+
+  q <- # q's for the piecwise linear CDF 
+    seq(lnsxmin, lnsxmax, length.out=Nq) 
+
+  ## make piecewise linear density d
+  sumlog <- double(Nq)  
+  for (kd in 1:N) {    # loop over data
+    sumlog <- sumlog + 
+      dnorm(X[j+1, kd], mean=xo[kd], sd=exp(q), log=TRUE)
+  }
+  d <- exp(sumlog) # piecewise linear density
+  
+  lnsx[j+1] <<-  draw1(q,d) # update lnsx
+  return(invisible(NULL))
+}
+```  
+
+## Sampling  
+
+We now put these functions to work in a Gibbs sampler. It was/is a mistake on my part use the names `xo` and `x` for both the centered and uncentered x-data and x's. It could cause confusion, and it prevents me from running the following chunk repeatedly for debugging.   
+
+Notice that for each `x[i]` I set the lower and upper limits of its prior to be `xo - 2` and `xo + 2`, respectively. it seems like a reasonable assumption that each true x-value is within two units of its observed value. We check this assumption below by examining the x-y scatterplots in Figure 3.  
+
+```{r sampling}
+Ns <- 1500 # number of samples, small while debugging
+nu <- 2    # normality of y-data
+Nq <- 201   # Number of points for PDFs and CDFs
+
+## preallocate storage
+X <- matrix(double(Ns*N), nrow=Ns)
+a <- double(Ns)
+b <- double(Ns)
+lnsy <- double(Ns)
+lnsx <- double(Ns)
+
+## center x-values
+xobar <- mean(xo)
+xoo <- xo       # keep original x-data
+xo <- xoo - xobar # centered x-data
+
+## limits of priors. Assume true x-values
+## are within 2 units of observed x-values
+xmin <- xo - 2 # lower limits of priors
+xmax <- xo + 2 # upper limits of priors
+amin <-  -2; amax <-   3
+bmin <-   2; bmax <-  10 # for centered x's
+lnsymin <- -5; lnsymax <- 5
+lnsxmin <- -5; lnsxmax <- 5
+
+## initial values
+X[1, ] <- xo
+a[1] <- 0.5 # 1,2,0.5 give near-identical results
+b[1] <- mean(yo)
+lnsx[1] <- 0
+lnsy[1] <- 0
+
+## sampling
+for (j in 1:(Ns-1)) {
+  ## update the x's
+  for (id in 1:N) {
+    newX(id=id)
+  }
+  ## update the rest
+  newa() 
+  newb()
+  newlnsy()
+  newlnsx()
+}
+
+## Correct MCMC samples for centering
+b <- b - a*xobar # true b's
+X <- X + xobar   # true x's
+Y <- apply(X, MARGIN=2, FUN=function(x) a*x+b) # true y's
+
+## Discard first 500 samples as burn-in
+burnin <- 500
+b <- b[(burnin+1):Ns]
+a <- a[(burnin+1):Ns]
+X <- X[(burnin+1):Ns, ]
+Y <- Y[(burnin+1):Ns, ]
+lnsx <- lnsx[(burnin+1):Ns]
+lnsy <- lnsy[(burnin+1):Ns]
+
+## Restore the x-data, for use in plotting below.
+xo <- xoo
+```  
+
+# GS results  
+
+As I am running only a single chain here, I made several runs with different initial values. The results were nearly identical, as expected. I generated `r Ns` samples and discarded the first `r burnin` samples as a burn-in period. In a real research problem you would ask JAGS to run 3+ chains in parallel, depending on the number of cores in your machine. Each chain should have a different starting point, and the more chains the better.    
+
+The first rule of data analysis is _Plot every data point_. The rule for MCMC analysis, is _Plot everything_, i.e., plot every sample as many ways as you can think of, 
+
+## Results for _a_ and _b_  
+
+It might have been better to use Kruschke's `diagMCMC()` to make the following figure, but this way you will appreciate his utilities more when we start using them, and be able to customize them more easily if you want.  
+
+Recall that we set the true values of $a$ and $b$ to 1 in our synthetic data for easy reference. One should be careful about using special values, but in this case I am sure it makes no difference.        
+
+```{r diagnosticplots, fig.cap="**Figure 2.** The traceplots in the lower panel show that _b_ is much less stable than _a_. (We might have guessed that from the difference in the x-scales on the histograms of _a_ and _b_, and we might have expected it purely on theoretical grounds because the slope _a_ is invariant to translation of all the x's). However, it appears that the chain seldom gets stuck, which is good."}
+## some convenience functions...
+myhist <- # convenience wrapper for hist()
+function(x, freq=FALSE, cex.lab=1.2,
+         yaxs="ir", yaxt="n", ylab="", main="",
+         border="white", col="skyblue",...) {
+  hist(x=x, freq=freq, cex.lab=cex.lab, yaxs=yaxs, 
+       yaxt=yaxt, ylab=ylab, main=main,
+       border=border, col=col,...)
+}
+
+mypar <- # convenience wrapper for par()
+function(mgp=c(2.8,1,0), mar=c(4.2,0,1,1), bg="gray97",...) 
+  par(mgp=mgp, mar=mar, bg=bg,...) 
+
+ESSa <- effectiveSize(a)
+ESSb <- effectiveSize(b)
+
+layout(rbind(c(1, 2, 3),  # plots 1,2,3 share the upper panel
+             c(4, 4, 4))) # plot 4 takes the entire lower panel
+mypar()
+## panel 1, upper left
+ha <- myhist(x=a, xlab="a") 
+xtext <- median(a)
+ytext <- 0.75*max(ha$density)
+text(x=xtext, y=ytext, adj=0.5, cex=1.5,
+     labels=paste0("ESS(a) = ", round(ESSa)))
+## panel 2, upper middle
+hb <- myhist(x=b, xlab="b") 
+xtext <- median(b)
+ytext <- 0.75*max(hb$density)
+text(x=xtext, y=ytext, adj=0.5, cex=1.5,
+     labels=paste0("ESS(b) = ", round(ESSb)))
+## panel 3, upper right
+mypar(mar=c(4.1,4.,1,0))
+myblue <- adjustcolor("skyblue", alpha.f=0.50)
+plot(a, b, type="p", pch=".", col=myblue,
+     xlab="a", ylab="b", bty="l",
+     panel.first=grid(),
+     xlim=range(a), ylim=range(b))
+## panel 4, lower
+Nk <- Ns - burnin
+x <- 1:Nk
+mypar(mar=c(4, 4, 1, 1))
+plot(x=x, y=a, type="n", ylim=c(0, 2), 
+     yaxs="ir", #xaxs="ir", 
+     panel.first=grid(), bty="n", xlab="sample number", ylab="a, b" ) 
+points(x=x, y=a, pch=".", col="black")
+points(x=x, y=b, pch=".", col="red"  )
+legend("bottom", horiz=TRUE, bty="o", inset=0.05,
+       legend=c("a", "b"), pch=c(".", "."), 
+       pt.cex=c(3, 3), col=c("black", "red"))
+```  
+
+## Results for x and y   
+
+I was being lazy about coding this next figure, but then Jonathan's `A8-Metrop` shamed me into making it. Note the trick used to put a horizontal legend at the bottom of a multipanel plot.   
+
+```{r scatterplots, fig.asp=1.2, fig.cap="**Figure 3.** Scatterplots of x-y samples. There appears to be no probability mass piled up against the upper and lower limits of the priors, which were chosen to be the data values plus or minus 2. Data points 3 and 4, whose y-values seemed like obvious outliers, are off their respective plots, and nearly all sample medians are close to the true values."}
+
+par(oma=c(3.5, 0, 0, 0), # big outer margin 1 for legend
+    mfrow=c(5, 4),       # 5x4 matrix of plots, fill by row
+    mar=c(4, 4, 3, 1),   # shrink margins 3 and 4
+    mgp=c(2.4, 1, 0),    # move axis labels nearer to axes
+    bg="grey96")         # plot background color
+
+## reduce opacity for a grayscale effect
+myblack <- adjustcolor("black", alpha.f=0.15)  
+
+myplot <- function(id) { # scatterplot of x[id]-y[id]
+  main <- paste0("x[", id, "] - y[", id,"]") # for legend()
+  xlab  <- paste0("x[", id, "]")
+  ylab  <- paste0("y[", id, "]")
+  plot(X[,id], Y[,id], main=main, type="p", pch=19,
+       xlab=xlab, ylab=ylab, col=myblack, bty="n",
+       xlim = c(min(X[,id])-0.1, max(X[,id]+0.1)),
+       ylim = c(min(Y[,id])-0.1, max(Y[,id])+0.1))
+  ## add true values
+  points(xt[id], yt[id], col='red', pch=3, cex=2)
+  ## add median values
+  medx <- median(X[ , id])
+  medy <- median(Y[ , id])
+  points(medx, medy, col='red', pch=1, cex=2)
+  ## add data values
+  points(xo[id], yo[id], col='skyblue', pch=1, cex=2)
+}
+
+for (i in 1:20) myplot(i) # fill the 20 panels
+
+## horizontal legend at bottom
+## first overlay the entire figure region with an empty plot
+par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0), 
+    mar = c(0, 0, 0, 0), new = TRUE)
+plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
+## now add the legend to the empty plot
+legend("bottom", horiz=TRUE, bty="n", xpd=TRUE,
+       inset=c(0, 0), cex=1.5, pt.cex=2,
+       legend=c("", "samples", "sample median       ", "true", "data"),
+       pch=c(NA, 1, 1, 3, 1), 
+       col=c(NA, "black", "red", "red", "skyblue")
+)
+```  
+
+
+<!-- _**Figure 3.** Scatterplots of x,y samples. True x,y values are indicated by_ `r colorize("+","red")`. _Median x-y values are indicated by_ `r colorize("O","red")`. _Observed x-y values are indicated by_ `r colorize("O","skyblue")`. _There appears to be no probability mass piled up against the upper and lower limits of the priors, which were chosen to be the data values plus or minus 2. Data points 3 and 4, whose y-values seemed like obvious outliers, are off their respective plots, and the sample medians are very close to the true values._ -->
+
+## Aliased x's (?)  
+
+In our synthetic data set some of the unknown true x's are quite close together, so it is reasonable to wonder whether our code is getting them mixed up (aliased). One way to tell is to plot the median x-values on their corresponding true values.  
+
+```{r aliasing, out.width="80%", fig.cap="**Figure 4.** By plotting the median x-values on the true x-values we can estimate whether the median x-values are in correct order. To be certain, we need to check the signs of successive differences."}
+mypar(mar=c(4,4,0,0))
+medx <- apply(X, MARGIN=2, FUN=median)
+plot(xt, medx, type="n", bty="n",
+     panel.first=grid(), adj=0.5,
+     xlim=c(1, 7.5), ylim=c(1, 7.5),
+     xaxs="ir", yaxs="ir",
+     xlab="true x", ylab="median x")
+text(xt, medx, labels=1:20)
+rng <- range(xt,medx)
+lines(rng, rng, col="red")
+goodx <- all(diff(medx) > 0)
+hm <- sum(diff(medx)<=0)
+```  
+
+By taking the `diff()` of the x-medians we see that they are 
+`r ifelse(goodx, "all", "NOT all")` in correct order. `r ifelse(goodx, "", paste0("Oops! ", c("Two", "Three", "Four", "Five")[hm], " x-values are out of order."))` (Look at this paragraph in the Rmd to see how it was done.)  
+
+# The MAP   
+
+In traditional (i.e., non-Bayesian) statistics it is conventional to compute the _Maximum Likelihood Estimate_ (MLE). For our problem, that would be the point in our $N+4=24$ dimensional parameter space at which the _likelihood_ takes its maximum. As Bayesians, we are more interested in the _Maximum a Posteriori_ (MAP), which is the point in our 24-D space at which the _posterior_ takes its maximum. We cannot find the exact MAP, because all we have are samples from the posterior, but we can evaluate the posterior at each of those samples, and offer the sample with the largest value of the posterior as a good approximation to the MAP.  
+
+Finding the MAP using samples forces us to consider carefully the formula for our posterior and the trick we used for sampling from it. In particular, we simplified (I would say) our sampling process by sampling the _logarithms_ of $\sigma_x$ and $\sigma_y$ instead of sampling $\sigma_x$ and $\sigma_y$ directly. Let's review that for a moment before considering the formula for our posterior.  
+
+# A bit of review  
+Recall for a moment the nature of our posterior. We parameterized $\sigma_x$ and $\sigma_y$, the scale parameters of the sampling distributions, by their logarithms because that simplified our sampling procedure while giving us the true reciprocal priors for $\sigma_x$ and $\sigma_y$. In case that sounds strange, let's take a moment to recall the conservation of probability calculation we did in class. Define $\phi=\ln\sigma$, and consider the density $p(\sigma)\propto 1/\sigma$. What is the corresponding density of $\phi$? We calculate...  
+
+$$
+p_\phi(\phi)
+=\frac{p_\sigma(\sigma)}{\mid d\phi / d\sigma \mid} 
+= \frac{\sigma^{-1}}{\mid d\ln\sigma/d\sigma\mid}
+= \frac{\sigma^{-1}}{\sigma^{-1}}
+= 1.
+$$  
+
+The practical consequence of this relation is that if we want to sample from $p(\sigma)\propto 1/\sigma$ we can take samples $\phi^{(i)}$ from the _uniform_ distribution for $\phi$, and our samples $\sigma^{(i)}$ from $p(\sigma)\propto 1/\sigma$ are given by $\sigma^{(i)}=\exp\phi^{(i)}$. We now verify that statement by means of the following numerical experiment.  
+
+Consider 
+
+$$
+p(\sigma) = \cases{1/(C\sigma)\ \  {\rm if}\ \ 
+\epsilon \le \sigma\ \le \epsilon^{-1} \\ 
+\ 0\ \ \ \ \ \ \ \ \ \ \ \  {\rm otherwise}} \tag{15}
+$$  
+in which 
+
+$$
+C 
+=\int_\epsilon^{\epsilon^{-1}}\! d\sigma/\sigma
+=\left[\ln\sigma\right]_\epsilon^{\epsilon^{-1}}
+=\ln\epsilon^{-1} - \ln \epsilon
+= 2\ln\epsilon^{-1} \tag{16}
+$$  
+We will now sample from the uniform distribution on $[\epsilon, \epsilon^{-1}]$, exponentiate our samples, and compare the histogram of those samples with the function given in equation (13). Here we go... 
+
+```{r map1, fig.asp=1, fig.cap=fig.cap, fig.width=3.5, out.width="50%"}
+par(mgp=c(2.5,1,0),     # move axis labels closer to axes
+    mar=c(4.2,2,1,1),   # reduce margins 2,3,4
+    bg="gray97")        # background color
+Nsam <- 100000
+
+## get samples
+eps <- 0.1
+ll <-  log(eps) # lower limit of phi
+ul <- -ll       #  uppef limit of phi
+phi <- runif(Nsam, min=ll, max=ul) # samples of phi
+sig <- exp(phi) # samples of sigma
+
+## make histogram of samples
+breaks <- seq(exp(ll), exp(ul), len=101)
+hist(sig, freq=FALSE, breaks=breaks, 
+     xlab=expression(sigma), main="",
+     cex.lab=1.2, border="white", col="skyblue",
+     yaxs="ir", yaxt="n")
+
+## add target distribution to the histogram
+x <- seq(eps, 1/eps, len=101)
+x <- 0.5*(x[-1] + x[-length(x)])
+C <- 2*log(1/eps)
+y <- 1/x/C
+lines(x, y, col="red", lwd=1)
+
+## add a legend to the plot
+legend(x="topright", legend=c("samples", "target"),
+       lty=c(NA, 1), lwd=c(NA, 2), col=c("skyblue", "red"),
+       pch=c(15, NA), pt.cex=1.2, bty="n", inset=0.10)
+fig.cap="**Figure 5.** Verifying that exponentiated samples from the uniform density are samples from the reciprocal density."  
+```  
+# The MAP (continued)  
+
+OK. As equations (8) and (9) are a long way back, here again is our full posterior (up to an unknown constant multiplier), and the log-posterior (up to an unknown additive constant). I am using math notation, with $N$ for the normal distribution and $t$ for the t-distribution.    
+
+$$\begin{align}
+p(x,a,b,\ln\sigma_x,\ln\sigma_y &\mid x^{(o)}, y^{(o)}, \nu) 
+= \tag{17a} \\ &\prod_i^N 
+{\rm t}(y_i^{(o)}\mid ax_i+b, e^{\ln\sigma_y}, \nu)\,
+{\rm N}(x_i^{(o)}\mid x_i, e^{\ln\sigma_x})
+\\ \ln p(x,a,b,\ln\sigma_x,\ln\sigma_y &\mid x^{(o)}, y^{(o)}, \nu)
+= \tag{17b} \\ 
+& \sum_i^N
+\left[\ln{\rm t}(y_i^{(o)}\mid ax_i+b, e^{\ln\sigma_y}, \nu)
++ \ln{\rm N}(x_i^{(o)}\mid x_i, e^{\ln\sigma_x})\right] 
+\end{align}$$  
+
+and here is a chunk to compute its value at each sample. With Metropolis, the full posterior is computed at every step, so it is easily saved for later use. With the Gibbs sampler the full posterior is seldom if ever computed during sampling because it isn't needed.  
+
+```{r map2, fig.cap=fig.cap}
+## function to compute the posterior for each sample
+fp <- function(x,xo,y,yo,a,b,lnsx,lnsy) {
+  ## finds N and nu in calling environment
+  
+  sumlog <- 0   
+  for (id in 1:N) {
+    sumlog <- sumlog +  # add log likelihood
+      dts(yo[id], mean=a*x[id]+b, logsd=lnsy, df=nu, log=TRUE) +
+      dnorm(xo[id], mean=x[id], sd=exp(lnsx), log=TRUE)
+  }
+  exp(sumlog) # posterior
+}
+
+## Use our function 
+post <- double(length(a))
+for (j in 1:length(a)) 
+  post[j] <- fp(x=X[j, ], xo=xo, y=Y[j, ], yo=yo, 
+                a=a[j], b=b[j], lnsx=lnsx[j], lnsy=lnsy[j])
+
+## find the MAP
+jmap <- which.max(post)
+amap <- a[jmap]
+bmap <- b[jmap]
+
+## scatterplot of a,b
+par(mgp=c(2.5,1,0),     # move axis labels closer to axes
+    mar=c(4.2,4,1,1),   # reduce margins 3,4
+    bg="gray97")        # background color
+myblue25 <- adjustcolor("skyblue", alpha.f=0.25)
+plot(a, b, type="p", pch=16, col=myblue25,
+     xlab="a", ylab="b", bty="l", cex.lab=1.2,
+     panel.first=grid(),
+     xlim=range(a, alm), ylim=range(b, blm)+c(-0.1, 0.1))
+## add MAP to plot
+points(amap, bmap, pch=17, col="red"  ) # MAP
+points(1   ,    1, pch= 3, col="black") # true
+points(alm ,  blm, pch= 0, col="black") # lm()
+points(median(a), median(b), pch=8, col="black")
+
+legend("topright", bty="n", inset=0.05, 
+       legend=c("samples", "MAP", "medians", "true", "lm() fit"), 
+       pch=c(16, 17, 8,  3, 0), pt.cex=c(1.5, 1, 1, 1), 
+       col=c("skyblue", "red", "black", "black", "black") 
+)
+
+fig.cap <- "**Figure 6.** Samples from the posterior, with the
+            MAP estimate, the medians of _a_ and _b_, the true 
+            values of _a_ and _b_, and the best-fit values from
+            _lm()_, way out in the upper left corner."
+```  
+
+Mathematically speaking, what we are looking at in Figure 6 is the projection of each `r N+4`-D sample into the 2-D space of $a$ and $b$. Samples are far apart in the full `r N+4`-D space (the so-called curse of dimensionality), but much closer together in the projection space. Each projected point is a sample from the following _marginal posterior distribution_:    
+
+$$
+p(a, b \mid x^{(0)}, y^{(0)}, \nu) = \\
+\big( \int\!\! dx_1 \int\!\! dx_2 \cdots \int\!\! dx_N \int\!\! 
+d\ln\sigma_x \int\!d\ln\sigma_y \big) 
+\ p(a, b, x, \ln\sigma_x, \ln\sigma_y \mid x^{(0)}, y^{(0)}, \nu)
+$$
+
+As the samples are so far apart in the full `r N+4`-D space, it is effectively impossible to compute the value of the integral on the right hand side by numerical methods such as the trapezoidal rule. We would need to calculate the posterior at 50^`r N+2`^ points in order to have 50 points in each dimension!
+
+With reference to Figure 6, it is often the case (depending on the random number seed) that that the median $(a,b)$ point is closer to the true $(a,b)$ than the MAP is. As I noted in the solutions to `A8-Metrop`, the MAP estimate tends to be unstable. The more samples you take the more accurate it is, but I guess it is always inferior to the medians, and I wouldn't ordinarily bother to compute it. The time I spent computing the MAP would have been better spent in contouring the $(a,b)$ scatterplot.    
+
+# Posterior prediction    
+
+Kruschke discusses posterior predictive checks on pp. 28-29, and uses them in specific cases later in the book. Formally, the posterior predictive distribution is defined by  
+
+$$
+p(D_p\mid D) = \int \! d\beta\, p(D_p\mid\beta)\, p(\beta\mid D)
+$$  
+in which $D_p$ is the predicted data, $p(D\mid\beta)$ is the sampling distribution, and $p(\beta\mid D)$ is the posterior. To sample from the posterior predictive we draw a sample $\beta^{(j)}$ from $p(\beta\mid D)$ and then a sample $D_p^{(j)}$ from $p(D\mid\beta^{(j)})$. In applications we already have the samples $\beta^{(j)}$ so it is easy to generate the $D_p^{(j)}$ if we wish.  
+
+Notation: If you want to emphasize that a draw $\beta^{(j)}$ is from $p(\beta\mid D)$ and not any old $p(\beta)$, write $\beta^{(j)}\mid D$. Thus it is syntactically correct,^[In discussions of human languages, computer languages, and mathematics, it is helpful to remember that _syntax is form, semantics is meaning_.] if slightly redundant, to write $\beta^{(j)}\mid D \sim p(\beta\mid D)$.  
+
+
+# CI's and PI's  
+
+Now that we have a suite of samples we can estimate a _credibility interval_ (CI) for the unknown true $y$ (call it `yp`) at any specified value of $x$, and a _prediction interval_ (PI) for the y-value we would observe there (call it `yop`). As an example, let's do that at $x=$ `r (xp <- 2)`. Recall that `Ns` is the number of samples we have, and that we discarded the first `r burnin` of them as burn-in.   
+
+Oops! We need a function `rts()` to give us a random number from the shifted scaled t-distribution. Here it is---adapted from `dt.scaled()` in the `metRology` package.  
+
+```{r}
+rts <- function(n, mean=0, sd=1, df=2) {
+  mean + sd * rt(n, df=df)
+}
+```  
+
+Now here is our plot. The 95% confidence interval for the unknown true value of y at $x=$ `r xp` is indicated by the magenta vertical lines. The 95% prediction interval for _observations_ of $y$ at $x=$ `r xp` is indicated by the vertical black lines.  
+
+```{r CIy, fig.cap=paste0("**Figure 7.** A 95% confidence interval for the unknown true value of _y_ at _x_ = ", xp, " (magenta) and a 95% prediction interval for observations of _y_ there (black).")}  
+par(mgp=c(2,1,0),     # move axis labels closer to axes
+    mar=c(3.5,1,1,1), # reduce margins 2,3,4
+    bg="grey95") 
+# xp is assigned in the narrative above
+Nk <- Ns - burnin # samples kept
+yp <- a*xp + b    # samples for CI
+yop <- rts(Nk, mean=yp, sd=exp(lnsy), df=nu) # samples for PI
+
+## make density plots (smoothed histograms)
+densyp  <- density( yp, kernel="gaussian")
+densyop <- density(yop, kernel="gaussian")
+
+## 95% credibility intervals
+CIyp  <- quantile( yp, probs=c(2.5, 97.5)/100)
+PIyop <- quantile(yop, probs=c(2.5, 97.5)/100)
+
+## plot
+xlab <- paste0("y values for x = ", xp)
+plot(densyop$x, densyop$y, col="black", type="l",
+     panel.first=grid(), 
+     xlab=xlab, cex.lab=1.2, bty="n", xlim=c(0, 6),
+     yaxs="ir", yaxt="n", ylab="", main="")
+abline(v=PIyop, col="black")
+
+densyp_scaled <- densyp$y/max(densyp$y)*max(densyop$y)*0.75
+lines(densyp$x, densyp_scaled, col="magenta", type="l", lwd=2)
+abline(v=CIyp, col="magenta")
+
+## add legend
+legend("topleft", 
+       legend=c("yop density", "yop 95% PI", "yp density", "yp 95% CI"),
+       title=paste0("y at x = ", xp), lty=c(1,1,1,1), lwd=c(1,1,2,1), 
+       col=c("black", "black", "magenta", "magenta"))
+```  
+
+
+
+# Model checking  
+
+Now that we know how to compute CI's and PI's from our samples, we can use the posterior predictive for model checking. All we have to do is compute the 95% PI for a sequence of x's. We plot the upper PI limits as a line on our data scatterplot and the lower PI limits as a second line. We'll put the CI's and PI's in a matrix and then use `matplot()` to plot them.  
+
+```{r modelChecking, fig.asp=0.8, fig.cap="**Figure 8.** Model checking with 95% credibility bounds for the true value of y, and 95% prediction bounds for the observed values of y. The PI lines are somewhat irregular because extreme quantiles are sensitive to the number of samples, and the variance of the y-value sampling distribution is very large."}
+par(mgp=c(2,1,0),     # move axis labels closer to axes
+    mar=c(3.5,3.5,1,1), # reduce margins 2,3,4
+    bg="grey97") 
+
+Nxp <- 61 # number of x's for CI, PI
+xp <- seq(0, 20, len=Nxp) # x's for prediction
+CIPI <- matrix(double(4*Nxp), nrow=Nxp) # preallocate storage
+
+for (i in seq_along(xp)) {
+  yp <- a*xp[i] + b # yp's for CI's
+  yop <- rts(Nk, mean=yp, sd=exp(lnsy), df=nu) # yop's for PI's
+  CIyp  <- quantile( yp, probs=c(2.5, 97.5)/100)
+  PIyop <- quantile(yop, probs=c(2.5, 97.5)/100)
+  CIPI[i, ] <- c(CIyp, PIyop)
+}
+
+## plot the CI's, PI's
+col <- rep("red", times=4)
+lty <- c("dashed", "dashed", "dotted", "dotted")
+matplot(xp, CIPI, type="l", col=col, lty=lty,
+        panel.first=grid(),
+        xlab="x", ylab="y")
+
+## add data to plot
+points(xo, yo)
+
+## add true model to plot
+yt <- 1*xp + 1
+lines(xp, yt, col="skyblue", lwd=2)
+
+## add lm() fit to plot
+ylm <- alm*xp + blm
+mygrey <- adjustcolor("grey50", alpha.f=0.50)
+lines(xp, ylm, col=mygrey, lwd=2)
+
+## add legend to plot
+legend("topleft", bty="o", inset=0.05,
+       lty=c("dashed", "dotted", NA, "solid", "solid"), 
+       lwd=c(1, 1, NA, 2, 2),
+       col=c("red", "red", "black", "skyblue", mygrey),
+       pch=c(NA, NA, 1, NA, NA),
+       legend=c("95% CI", "95% PI", "data", "true", "lm()")
+       )
+```  
+
+It is only mildly troubling that 10% (i.e., 2) of the `r N` data points fall outside the 95% PI (I would have been happier if only one point fell outside), but it is not too surprising. After all, our model isn't the same as the model that was used to generate the synthetic data. More sophisticated models sometimes include an indicator variable for whether a data point is an outlier or not. Our model certainly outshines the least squares model, and the true model is within our 95% CI at all x's.   
+
+# Extrapolation  
+
+Please note in Figure 8 that the CI bounds expand rapidly as $x$ moves out of the data region. This happens because small errors in slope are magnified by large values of $x$ in the process model $y=ax+b$. On a proportional basis, the CI bounds separate more rapidly than the PI bounds because the observational uncertainty of our model is not increasing with $x$.^[Recall that the variance of the sum of two uncorrelated random variates is the sum of the variances. If the variance of one of them increases steadily the variance of the other will eventually be insignificant in the sum.] 
+
+If we had a lot more data we might have used a model in which $\sigma_y$ increased with $x$. Such models are said to be [heteroscedastic](https://en.wikipedia.org/wiki/Heteroscedasticity), an intimidatingly long word for a simple concept.  
+
+<!-- # Appendix    -->
+
+<!-- ## Product rule {-}  -->
+
+<!-- Consider a joint PDF $p(u,v,w,x,y,z)$. The product rule means that all of the following statements are correct.     -->
+
+<!-- $$\begin{align} -->
+<!-- p(u,v,w,x,y,z) -->
+<!-- &=p(u\mid v,w,x,y,z)\,p(v,w,x,y,z)\\ -->
+<!-- &=p(u,v\mid w,x,y,z)\,p(w,x,y,z)\\ -->
+<!-- &=p(u,v,w\mid x,y,z)\,p(x,y,z)\\ -->
+<!-- &=p(u,v,w,x\mid y,z)\,p(y,z)\\ -->
+<!-- &=p(u,v,w,x,y\mid z)\,p(z)\\ -->
+<!-- \end{align}$$ -->
+
+<!-- We can assert that without actually knowing how to construct any of those PDFs.   -->
+
+<!-- The above relations continue to hold if we begin with a conditional distribution. For example,   -->
+
+<!-- $$\begin{align} -->
+<!-- p(u,v,w,x,y,z\mid r,s) -->
+<!-- &=p(u\mid v,w,x,y,z,r,s)\,p(v,w,x,y,z\mid r,s)\\ -->
+<!-- &=p(u,v\mid w,x,y,z,r,s)\,p(w,x,y,z\mid r,s)\\ -->
+<!-- &=p(u,v,w\mid x,y,z,r,s)\,p(x,y,z\mid r,s)\\ -->
+<!-- &=p(u,v,w,x\mid y,z,r,s)\,p(y,z\mid r,s)\\ -->
+<!-- &=p(u,v,w,x,y\mid z,r,s)\,p(z\mid r,s)\\ -->
+<!-- \end{align}$$ -->
+
+<!-- Moreover, the order of the variables in a PDF doesn't matter, provided only that in a conditional PDF (one with a pipe, |) the variables to the left of the | stay left and the variables to the right of the | stay right. For example,  -->
+
+<!-- $$p(u,v,w\mid x,y,z)=p(v,w,u\mid z,x,y)$$ -->
+
+<!-- ## Independence {-}  -->
+
+<!-- Independence means that if $a$ depends on $b$ but not $c$ then $p(a\mid b,c)=p(a\mid b)$. For example, in this assignment, $y$ depends only on $x$, $a$ and $b$; therefore  -->
+
+<!-- $$p(y\mid x, y^{(o)}, x^{(o)},\sigma_y,a,b\ldots) = p(y\mid x,a,b)$$ -->
+<!-- `r knit_exit()` -->
+
+<!-- ## Details of (2) and (4)   -->
+
+<!-- Here are step-by-step derivations of Equations (2) and (4) by Ron Ushijima.   -->
+
+<!-- Ron begins slightly differently, with  -->
+<!-- $p(a, b, x, y, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, x_o, y_o, \nu)$  -->
+<!-- instead of the   -->
+<!-- $p(a, b, x, y, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, x_o, y_o\vert \nu)$, -->
+<!-- that I began with, so he finishes up with a $p(\nu)$ on both sides, which cancels. The final result is the same, but I prefer to condition explicitly on $\nu$ from the start because it is part of our model specification rather than a stochastic variable.   -->
+
+<!-- Rather than cancelling, which is somewhat artificial, the $p(\nu)$ can be replaced on both sides of Ron's equations by $\delta(\nu-\nu^*)$ where $\nu^*$ is the specified value of $\nu$. Then, integrating the LHS and RHS over $\nu$ replaces each occurrence of $\nu$ by $\nu^*$. A minor inconvenience of this approach is that we are left with equations containing $\nu^*$ instead of $\nu$.   -->
+
+<!-- </br></br> -->
+
+<!-- \begin{align} -->
+<!-- \rm{LHS}  -->
+<!-- &= p(a, b, x, y, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, x_o, y_o, \nu) \\ -->
+<!-- \\  -->
+<!-- &= p(y\vert a, b, x, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, x_o, y_o, \nu) \\ -->
+<!-- &\times p(a, b, x, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, x_o, y_o, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y\vert a, b, x) \\ -->
+<!-- &\times p(a, b, x, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, x_o, y_o, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y\vert a, b, x) \\ -->
+<!-- &\times p(\sigma_x\vert a, b, x, \sigma_y, \ln\sigma_x, \ln\sigma_y, x_o, y_o, \nu) \\ -->
+<!-- &\times p(a, b, x, \sigma_y, \ln\sigma_x, \ln\sigma_y, x_o, y_o, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y\vert a, b, x) \\ -->
+<!-- &\times p(\sigma_x\vert \ln\sigma_x) \\ -->
+<!-- &\times p(a, b, x, \sigma_y, \ln\sigma_x, \ln\sigma_y, x_o, y_o, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y\vert a, b, x) \\ -->
+<!-- &\times p(\sigma_x\vert \ln\sigma_x) \\ -->
+<!-- &\times p( \sigma_y\vert a, b, x, \ln\sigma_x, \ln\sigma_y, x_o, y_o, \nu) \\ -->
+<!-- &\times p(a, b, x, \ln\sigma_x, \ln\sigma_y, x_o, y_o, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y\vert a, b, x) \\ -->
+<!-- &\times p(\sigma_x\vert \ln\sigma_x) \\ -->
+<!-- &\times p(\sigma_y\vert \ln\sigma_y) \\ -->
+<!-- &\times p(a, b, x, \ln\sigma_x, \ln\sigma_y, x_o, y_o, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y\vert a, b, x) \\ -->
+<!-- &\times p(\sigma_x\vert \ln\sigma_x) \\ -->
+<!-- &\times p(\sigma_y\vert \ln\sigma_y) \\ -->
+<!-- &\times p(a, b, x, \ln\sigma_x, \ln\sigma_y \vert x_o, y_o, \nu) \\ -->
+<!-- &\times p(x_o, y_o, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y\vert a, b, x) \\ -->
+<!-- &\times p(\sigma_x\vert \ln\sigma_x) \\ -->
+<!-- &\times p(\sigma_y\vert \ln\sigma_y) \\ -->
+<!-- &\times p(a, b, x, \ln\sigma_x, \ln\sigma_y \vert x_o, y_o, \nu) \\ -->
+<!-- &\times p(x_o, y_o \vert \nu) \\ -->
+<!-- &\times p(\nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y\vert a, b, x)\, p(\sigma_x\vert \ln\sigma_x)\, p(\sigma_y\vert \ln\sigma_y) \\ -->
+<!-- &\times p(a, b, x, \ln\sigma_x, \ln\sigma_y \vert x_o, y_o, \nu) \\ -->
+<!-- &\times p(x_o, y_o \vert \nu)\,p(\nu) \\ -->
+<!-- \\ -->
+
+<!-- &\propto \,\,p(y\vert x,a,b)\, p(\sigma_x\vert\ln\sigma_x)\, p(\sigma_y\vert\ln\sigma_y)\\ -->
+<!-- &\times p(x, a, b, \ln\sigma_x, \ln\sigma_y \vert x_o, y_o, \nu) \tag{4a} \\  -->
+<!-- &\times p(x_0, y_0\vert\nu)\,p(\nu)\\ -->
+<!-- \\ -->
+<!-- &= \delta(y - ax - b)\, \delta(\sigma_x - e^{\ln\sigma_x})\, -->
+<!-- \delta(\sigma_y - e^{\ln\sigma_y}) \\ -->
+<!-- &\times p(x, a, b, \ln\sigma_x, \ln\sigma_y \vert x_o, y_o, \nu)\tag{4b} \\ -->
+<!-- &\times p(x_0, y_0\vert\nu) \ \ \ {\rm Note\ that}\ p(\nu)\ {\rm cancelled\ with\ the\ RHS} -->
+<!-- \end{align} -->
+
+<!-- </br></br> -->
+
+<!-- \begin{align} -->
+<!-- \rm{RHS}  -->
+<!-- &= p(a, b, x, y, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, x_o, y_o, \nu) \\ -->
+<!-- \\  -->
+<!-- &= p(y_o\vert a, b, x, y, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, x_o, \nu) \\ -->
+<!-- &\times p(a, b, x, y, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, x_o, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y_o\vert y, \sigma_y, \nu) \\ -->
+<!-- &\times p(a, b, x, y, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, x_o, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y_o\vert y, \sigma_y, \nu) \\ -->
+<!-- &\times p(x_o\vert a, b, x, y, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, \nu) \\ -->
+<!-- &\times p(a, b, x, y, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y_o\vert y, \sigma_y, \nu) \\ -->
+<!-- &\times p(x_o\vert x, \sigma_x) \\ -->
+<!-- &\times p(a, b, x, y, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y_o\vert y, \sigma_y, \nu) \\ -->
+<!-- &\times p(x_o\vert x, \sigma_x) \\ -->
+<!-- &\times p(y\vert a, b, x, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, \nu) \\ -->
+<!-- &\times p(a, b, x, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y_o\vert y, \sigma_y, \nu) \\ -->
+<!-- &\times p(x_o\vert x, \sigma_x) \\ -->
+<!-- &\times p(y\vert a, b, x) \\ -->
+<!-- &\times p(a, b, x, \sigma_x, \sigma_y, \ln\sigma_x, \ln\sigma_y, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y_o\vert y, \sigma_y, \nu) \\ -->
+<!-- &\times p(x_o\vert x, \sigma_x) \\ -->
+<!-- &\times p(y\vert a, b, x) \\ -->
+<!-- &\times p(\sigma_y\vert a, b, x, \sigma_x, \ln\sigma_x, \ln\sigma_y, \nu) \\ -->
+<!-- &\times p(a, b, x, \sigma_x, \ln\sigma_x, \ln\sigma_y, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y_o\vert y, \sigma_y, \nu) \\ -->
+<!-- &\times p(x_o\vert x, \sigma_x) \\ -->
+<!-- &\times p(y\vert a, b, x) \\ -->
+<!-- &\times p(\sigma_y\vert \ln\sigma_y) \\ -->
+<!-- &\times p(a, b, x, \sigma_x, \ln\sigma_x, \ln\sigma_y, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y_o\vert y, \sigma_y, \nu) \\ -->
+<!-- &\times p(x_o\vert x, \sigma_x) \\ -->
+<!-- &\times p(y\vert a, b, x) \\ -->
+<!-- &\times p(\sigma_y\vert \ln\sigma_y) \\ -->
+<!-- &\times p(\sigma_x\vert a, b, x, \ln\sigma_x, \ln\sigma_y, \nu) \\ -->
+<!-- &\times p(a, b, x, \ln\sigma_x, \ln\sigma_y, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y_o\vert y, \sigma_y, \nu) \\ -->
+<!-- &\times p(x_o\vert x, \sigma_x) \\ -->
+<!-- &\times p(y\vert a, b, x) \\ -->
+<!-- &\times p(\sigma_y\vert \ln\sigma_y) \\ -->
+<!-- &\times p(\sigma_x\vert \ln\sigma_x) \\ -->
+<!-- &\times p(a, b, x, \ln\sigma_x, \ln\sigma_y, \nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y_o\vert y, \sigma_y, \nu) \\ -->
+<!-- &\times p(x_o\vert x, \sigma_x) \\ -->
+<!-- &\times p(y\vert a, b, x) \\ -->
+<!-- &\times p(\sigma_y\vert \ln\sigma_y) \\ -->
+<!-- &\times p(\sigma_x\vert \ln\sigma_x) \\ -->
+<!-- &\times p(a)\, p(b)\, p(x)\, p(\ln\sigma_x)\, p(\ln\sigma_y)\, p(\nu) \\ -->
+<!-- \\ -->
+<!-- &= p(y_o\vert y, \sigma_y, \nu)\, p(y\vert a, b, x)\, p(\sigma_y\vert \ln\sigma_y)\, p(\ln\sigma_y) \\ -->
+<!-- &\times p(x_o\vert x, \sigma_x)\, p(\sigma_x\vert \ln\sigma_x)\, p(\ln\sigma_x) \\ -->
+<!-- &\times p(a)\, p(b)\, p(x)\, p(\nu) \\ -->
+<!-- \\ -->
+
+<!-- &\propto -->
+<!-- p(y_o\vert y, \sigma_y, \nu)\,p(y \vert x, a, b)\,p(\sigma_y \vert \ln\sigma_y) -->
+<!-- \ p(\ln \sigma_y)\\ -->
+<!-- &\times -->
+<!-- p(x_o\vert x, \sigma_x)\ p(\sigma_x \vert \ln\sigma_x) \tag{2a} -->
+<!-- \ p(\ln \sigma_x)\\ -->
+<!-- &\times -->
+<!--  p(x)\, p(a)\, p(b) \ \ \ \ \  -->
+<!--  {\rm Note\ that}\ p(\nu)\ {\rm cancelled\ with\ the\ LHS}\\ \\ -->
+<!-- &={\rm dt}(y_o\vert y, \sigma_y, \nu)\, \delta(y-ax-b)\,  -->
+<!-- \delta(\sigma_y-e^{\ln \sigma_y}) -->
+<!-- \, {\rm dunif}(\ln \sigma_y)\\ -->
+<!-- &\times {\rm dnorm}(x_0\vert x, \sigma_x)\, \delta(\sigma_x-e^{\ln \sigma_x}) -->
+<!-- \, {\rm dunif}(\ln \sigma_x) \tag{2b}\\ -->
+<!-- &\times {\rm dunif}(x)\, {\rm dunif}(a)\,  -->
+<!-- {\rm dunif}(b). -->
+<!-- \end{align} -->
+
+# Footnotes  

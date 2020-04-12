@@ -1,0 +1,524 @@
+---
+title: "Frazer_A8-JAGS"
+author: "Neil Frazer"
+date: "4/5/2020"
+output: 
+  html_document: 
+    theme: readable #paper #cosmo #journal #cerulean
+    toc: true
+    smooth_scroll: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---  
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 13px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.math{ font-size: 10pt;}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px;
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px;
+}
+pre{/*preformatted text*/ 
+    font-size: 12px;
+}
+p.caption {/* figure captions */ 
+    font-size: 1.0em;
+    font-style: italic; 
+} 
+</style>
+
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+source("DBDA2E-utilities.R")
+library(knitr)
+library(coda)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  ",
+               #echo=FALSE,
+               cache=c(TRUE, FALSE)[2], 
+               autodep=c(TRUE, FALSE)[2],
+               eval.after="fig.cap",
+               collapse=TRUE, 
+               dev="png",
+               fig.width=7.0,
+               out.width="95%",
+               fig.asp=0.9/gr,
+               fig.align="center"
+               )
+## handy function to color text
+colorize <- function(x, color) {
+  if (knitr::is_latex_output()) {
+    sprintf("\\textcolor{%s}{%s}", color, x)
+  } else if (knitr::is_html_output()) {
+    sprintf("<span style='color: %s;'>%s</span>", color, x)
+  } else x
+}
+```  
+
+# Introduction    
+
+- With the file `JAGSexample.Rmd` as a rough guide, I use JAGS to analyze the same data that were analyzed in `Frazer_A8-Metrop.Rmd` and `Frazer_A8-GSV2.Rmd`. I run JAGS in stand-alone batch mode, as in Section 2 of `JAGSexample.Rmd`.    
+
+- I copied diagnostic code from `JAGSexample.Rmd` and from `Frazer_A8-GSV2.Rmd`.  
+
+# Synthetic data  
+Here we synthesize the same data as in the last two assignments: x-y data with a linear process model $y=ax+b$, with errors in both the x- and y-observations and a few outliers in the y-observations. The plot shows the fit of the data with `stats::lm()`, which is a least-squares fit. `lm()` assumes that the x's are exactly known and that the errors in y are normally distributed.      
+
+```{r synthetics, fig.cap=fig.cap}
+par(mar=c(4, 4, 1, 1),
+    mgp=c(2.5, 1, 0),
+    bg="grey97")
+#set.seed(seed=5, kind="Mersenne-Twister")
+set.seed(seed=9, kind="Mersenne-Twister") 
+N <- 20     # number of data pairs
+a <- 1.0    # slope
+b <- 1.0    # intercept 
+
+if (c(TRUE, FALSE)[1]) { # hard test
+  x  <- runif(N, min=2.0, max=7.0)
+  x  <- sort(x) # x values
+  sx  <- 0.2    # SDx
+  sy  <- 0.2    # SDy
+   r  <- 0.2    # prevalence of y-outliers
+  sy1 <- 3.0    # SD for y-outliers
+} else {  # easy test
+  x   <- seq(from=1, to=10, length.out=N)
+  sx  <- 0.1
+  sy  <- 0.1    # SDy
+   r  <- 0.1    # prevalence of y-outliers
+  sy1 <- 0.1
+}
+y <- a*x + b # y values
+
+## save some stuff for later
+xt <- x 
+yt <- y 
+at <- a
+bt <- b
+
+xo <- rnorm(N, mean=x, sd=sx) # observe x's
+yo <- rnorm(N, mean=y, sd=sy) # observe y's
+xo <- xo[order(xo)]
+yo <- yo[order(xo)]
+
+## make y-outliers
+ii <- # indices of the yo to be overwritten
+  sample(1:N, size=round(r*N), replace=FALSE)
+yo[ii] <- # outliers
+  rnorm(length(ii), mean=y[ii], sd=sy1)
+
+## lm() fit
+fit <- lm(yo ~ xo)
+alm <- coef(fit)[2]; blm <- coef(fit)[1]
+## plot data, true model and lm() fit
+plot(xo, yo, bty="l", panel.first=grid(),
+     xlab="x", ylab="y", xaxs="i", yaxs="i",
+     xlim=range(xo)+c(-1,1), ylim=range(yo)+c(-1,1))
+lines(x=c(0,11), y=a*c(0,11)+b, col="black")
+abline(fit, col="red")
+leg2 <- paste0("true model: a=", signif(a,2), ", ", 
+               "b=", signif(  b,2) )
+leg3 <- paste0("lm() fit: a=", signif(alm,2), ", ", 
+               "b=", signif(blm,2) )
+legend("bottomright", bty="o", box.col="gray50",
+       title=expression(italic(y==ax+b)),
+       inset=c(0.05, 0.05),
+       legend=c("data", leg2, leg3),
+       lty=c(NA, 1, 1), pch=c(1, NA, NA),
+       col=c("black", "black", "red"))
+fig.cap <- paste0("**Figure 1.** Synthetic data for a linear regression 
+                  problem with y-outliers and errors in x-values. ", 
+                  "There are ", N, " x-y pairs in the dataset. ",
+                  "The x-values have SD =", sx, " and the y-values
+                  have SD =", sy, " except that ", length(ii), 
+                  " of the y-values are outliers with SD =", sy1,
+                  ". However, as data analysts, we cannot know which
+                  points are outliers, or even whether outliers
+                  exist in the data. All we know is that our x-meter is 
+                  reliable (if not perfectly accurate) but that our 
+                  y-meter has occasional glitches. Under these circumstances 
+                  the best we can do is use a model that is robust 
+                  to y-value outliers.")
+```  
+
+# Centering  
+
+The example file `JAGSexample` centers the x-data inside JAGS, but I suggest you center the x-data _before_ giving it to JAGS. When JAGS has finished sampling, decenter the x-samples and the intercept samples as in the earlier assignments. Centering and decentering are easy, but also easy to get wrong. The following chunk centers the x-data.  
+
+```{r center}
+xobar <- mean(xo)
+xoo <- xo         # keep original x-data
+xo <- xoo - xobar # centered x-data
+```
+
+# JAGS model  
+
+Here is a model for you to consider. It is nearly the same as the one in the earlier assignments, but is slightly more careful about the limits of the priors. You should look up the normal distribution and the Student-t distribution in the JAGS manual to make sure we are using them correctly here; they aren't quite the same as in R. Notice that we are asking JAGS to calculate the deterministic variable `logpost` for our later use in finding the MAP.  
+```
+model {
+  for (i in 1:N) { /* observe x's and y's */
+    xo[i] ~ dnorm(x[i], 1/(sx*sx))
+    yo[i] ~ dt(y[i], 1/(sy*sy), nu)
+  }
+  
+  for (i in 1:N) { /* deterministic process model */
+    y[i] <- a*x[i] + b
+  }
+  
+  for (i in 1:N) { /* priors for x's */
+    x[i] ~ dunif(xmin[i], xmax[i])
+  }
+  
+  /* more priors */
+  a    ~ dunif(amin, amax)
+  b    ~ dunif(bmin, bmax)
+  lnsx ~ dunif(lnsxmin, lnsxmax)
+  lnsy ~ dunif(lnsymin, lnsymax)
+  
+  /* more deterministic variables */
+  sx  <- exp(lnsx)
+  sy  <- exp(lnsy)
+  
+  /* log-posterior, for later use to find the MAP */
+  logpost <- sum( logdensity.t(   yo, y, 1/(sy*sy), nu) + 
+                   logdensity.norm(xo, x, 1/(sx*sx)   ) )
+}
+```  
+
+The following chunk writes the model into a file called `bug`.  
+
+```{r modelfile}
+modelString <- # character string
+"model {
+  for (i in 1:N) { /* observe x's and y's */
+    xo[i] ~ dnorm(x[i], 1/(sx*sx))
+    yo[i] ~ dt(y[i], 1/(sy*sy), nu)
+  }
+  
+  for (i in 1:N) { /* deterministic process model */
+    y[i] <- a*x[i] + b
+  }
+  
+  for (i in 1:N) { /* priors for x's */
+    x[i] ~ dunif(xmin[i], xmax[i])
+  }
+  
+  /* more priors */
+  a    ~ dunif(amin, amax)
+  b    ~ dunif(bmin, bmax)
+  lnsx ~ dunif(lnsxmin, lnsxmax)
+  lnsy ~ dunif(lnsymin, lnsymax)
+  
+  /* more deterministic variables */
+  sx  <- exp(lnsx)
+  sy  <- exp(lnsy)
+
+  /* log-posterior, for later use to find the MAP */
+  logpost <- sum( logdensity.t(   yo, y, 1/(sy*sy), nu) + 
+                   logdensity.norm(xo, x, 1/(sx*sx)   ) )
+}
+"
+writeLines(modelString, con = "bug")
+```  
+
+# Limits of priors  
+
+In setting the limits for the x-priors, we will assume for sampling efficiency that the true x-values are not more than 2 units away from the observed x-values. This assumption is easily relaxed by enlarging the limits, but first we want a model that runs in a reasonable time and gives sensible answers.    
+
+```{r priorlimits}
+## limits of priors. Assume true x-values
+## are within 2 units of observed x-values
+xmin <- xo - 2 # lower limits of priors
+xmax <- xo + 2 # upper limits of priors
+amin <-  -2; amax <-  3 # from a glance at the plot
+bmin <-   2; bmax <- 10 # for centered x's
+lnsxmin <- log(0.01); lnsxmax <- log(100)
+lnsymin <- log(0.01); lnsymax <- log(100)
+```
+
+# Data file  
+
+Following `JAGSexample.Rmd` we'll `dump()` the data to a file with the name (drumroll here) `data`. Notice that the data file contains the limits for the priors, the number of data points `N`, and normality parameter `nu`. In other words, it has the fixed parameters of our model as well as the actual x-y observations.   
+
+```{r datafile}
+nu <- 2
+N  <- length(xo)
+dump(c("N", "nu", "xo", "yo", "xmin", "xmax",
+       "amin", "amax", "bmin", "bmax",
+       "lnsxmin", "lnsxmax", "lnsymin", "lnsymax"), 
+     file = "data.R")
+```  
+
+In the JAGS model above, you might think we could just replace `xmin[i]` by `xo[i]-2` and so forth, so we would not have to bother creating the vectors `xmin` and `xmax`, but this will cause JAGS to throw an error because the data will then appear to depend on itself. Think of any _directed acyclic graphs_ in our textbook: if the data appear at both the top and bottom, the graph will contain a _directed cycle_. Directed cycles can arise in other ways, and JAGS will stop and tell you when they occur.   
+
+# Initial value files  
+
+Here we create an initial value file for each chain. We must be careful to include initial values for _all_ the parameters, including the unknown x's. Here I specified the number of chains as 3 because I don't know how many cores your laptop has. You can find out by typing `parallel::detectCores()` in the console. My laptop has 8 cores, so I would optimally specify 7 chains, which leaves one core free for surfing while JAGS runs.  
+
+```{r initialvaluefiles}
+set.seed(12)
+nChains <- 3 # detectCores() - 1 is best
+for (ic in 1: nChains) {
+  a <- runif(1, amin, amax)
+  b <- runif(1, bmin, bmax)
+  lnsx <- runif(1, lnsxmin, lnsxmax)
+  lnsy <- runif(1, lnsymin, lnsymax)
+  for (id in 1:N) {
+    x[id] <- runif(1, xo[id]-1, xo[id]+1)
+  }
+  dump( # write initial value file for iChain
+         c("a", "b", "lnsx", "lnsy", "x"), 
+         file=paste0("inits", ic, ".R")
+        )
+}
+```  
+
+# Command file  
+
+In the following chunk I make a command file called `cmd`.  
+
+```{r commandfile}
+cmdFileString <- # character string, note quotes
+"
+model in bug
+data  in data.R
+
+load glm /* test comment */
+
+compile, nchains(3) 
+
+inits in inits1.R, chain(1)
+inits in inits2.R, chain(2)
+inits in inits3.R, chain(3)
+
+initialize
+
+adapt 1000
+
+update 1000
+
+monitor    a, thin(2)
+monitor    b, thin(2)
+monitor   sx, thin(2)
+monitor   sy, thin(2)
+monitor    x, thin(2)
+monitor logpost, thin(2)
+
+update 2000
+
+coda *
+"
+
+writeLines(cmdFileString, con="cmd")
+```  
+
+# Execute JAGS   
+
+The following chunk creates a terminal with the bash engine instead of the R engine, just like in the example file `JAGSexample.Rmd`. The chunk header is "{bash execute, results='hide'}" and the only line in the chunk is `jags cmd`. The word `jags` tells the operating system on your computer to run JAGS with input from the file named `cmd`.  
+
+```{bash execute, results='hide'}
+jags cmd
+```  
+
+# Read sample files  
+
+As JAGS runs, it writes the samples into plain text files, one file for each chain. The default names for these files are `CODAchain1.txt`, `CODAchain2.txt` and so forth. JAGS also creates a plain text file whose default name is `CODAindex.txt` which is a kind of master file containing information about the individual chain files. As the foregoing are all **plain text files**, they can be easily read by programs in other languages, but since we are here in R Markdown we will use `coda::read.coda()`. It returns a list of class `mcmc` containing the samples and other information. You can make an object of class `mcmc` into a matrix by feeding it to `as.matrix()`.    
+
+```{r readSampleFiles}
+require("coda")
+## chain1, chain2 and chain3 will be objects of class mcmc
+## according to the help entry for coda::read.coda()
+chain1 <- read.coda(output.file = "CODAchain1.txt", # mcmc object
+                    index.file  = "CODAindex.txt" ,
+                    quiet = TRUE            )
+chain2 <- read.coda(output.file = "CODAchain2.txt", # mcmc object
+                    index.file  = "CODAindex.txt" ,
+                    quiet = TRUE            )
+chain3 <- read.coda(output.file = "CODAchain3.txt", # mcmc object
+                    index.file  = "CODAindex.txt" ,
+                    quiet = TRUE            )
+# class(chain1)
+# head(as.matrix(chain1))
+```  
+
+In this next chunk, I collect `chain1`, `chain2` and `chain3` into an object of class `mcmc.list` called `chains`. It could be called anything, but I am following Kruschke's naming conventions for things. You can use `str()` to show what is in `chains`, and you can make it into a matrix by feeding it to `as.matrix()`.     
+
+```{r create_mcmc.list}
+## chains will be an object of class mcmc.list
+chains <- as.mcmc.list(list(chain1,chain2,chain3))  # mcmc.list object
+# str(chains)
+# head(as.matrix(chains))
+```  
+
+# Traceplots
+In the following chunk I use `coda::traceplot()` to make a traceplot of each chain. `traceplot()` knows what to do with an object of class `mcmc.list` such as `chains`; it makes a traceplot for each chain in `chains`.  
+
+```{r traceplots, fig.asp=0.25}
+par(mar=c(3,4,2,1), mgp=c(2,0.7,0), mfcol= c(1,3))
+traceplot(chains)
+```  
+_**Figure 2**. Traceplots made using `coda::traceplot(chains)`. This function is smart enough to find each variable in an object of class `mcmc.list` and combine the results for different chains._
+
+# Density plots  
+In the following chunk I use `coda::densplot()` to plot the posterior PDF for each stochastic variable that was _monitored_ by JAGS. Remember we created that command file for JAGS containing lines such as `monitor a thin(2)`.  
+
+```{r densityplots, fig.asp=0.25}
+par(mar=c(3,4,2,1), mgp=c(2,0.7,0), mfcol= c(1,3))
+densplot(chains)  
+```  
+_**Figure 3**. Density plots (effectively smoothed histograms) made using `coda::densplot(chains)`. Like `traceplot()`, this function is smart enough to find each variable in an object of class `mcmc.list` and combine the results for different chains._
+
+# Summary table  
+
+Recall the generic R function `summary()`. Not surprisingly the coda package provides a _method_ for `summary()`. We don't have to remember the names of the methods `summary.mcmc()` and `summary.mcmc.list()` because `summary()` will find them automatically. The output from `summary()` is a list containing the element `statistics` and the element `quantiles`. Remember that to extract an element of a list we can use the selection operator `$`. Thus `summary(chains)$statistics` will be a matrix containing things like mean and standard deviation, and `summary(chains)$quantiles` will be a matrix of quantiles. (We don't have to memorize the foregoing; we can always use `str()` to find out what is inside any R object.)  
+
+We'll use `knitr::kable()` to print the summary, because the result is more attractive than that from `print()`.  
+
+```{r summaryStatistics}
+options(digits=3)
+  kable(summary(chains)$statistics, align="c", 
+        caption="**Table 1.** Summary statistics for the toy 
+        regression problem in the JAGS manual. The intercept alpha
+        is for centered data.")
+```  
+
+# Table of quantiles  
+In the following chunk I use `knitr::kable()` to print the table of quantiles.  
+
+```{r summaryQuantiles}
+options(digits=2)
+kable(summary(chains)$quantiles, align="c", caption="**Table 2.** Posterior quantiles for the toy regression problem in the JAGS manual. The intercept alpha is for centered data.")
+```  
+
+# Decentering  
+
+In this next chunk we extract the samples from `chains`, which you recall is an object of class `mcmc.list` and put them into a matrix. We then extract the columns of the matrix by name. Finally we decenter the samples of $x$ and intercept $b$. The slope $a$ requires no adjustment because it is invariant to translation of the $x$ values.    
+
+```{r xyvalues}
+sams <- as.matrix(chains)
+X  <- sams[ , 5:24]
+a  <- sams[ , "a"]
+b  <- sams[ , "b"]
+sx <- sams[ , "sx"]
+sx <- sams[ , "sy"]
+logpost <- sams[ , "logpost"]
+## decenter 
+X  <- X + xobar
+xo <- xoo
+b <- b - a*xobar # true b's
+Y <- apply(X, MARGIN=2, FUN=function(x) a*x+b) # true y's
+```   
+
+# x-y scatterplots  
+
+In the following chunk we make scatterplots of the x-y samples, indicating their median values, the true values, and the values of the data.  
+
+```{r scatterplots, fig.asp=1.2, fig.cap="**Figure 3.** Scatterplots of x-y samples. There appears to be no probability mass piled up against the upper and lower limits of the priors, which were chosen to be the data values plus or minus 2. Data points 3 and 4, whose y-values seemed like obvious outliers, are off their respective plots, and nearly all sample medians are close to the true values."}
+
+par(oma=c(3.5, 0, 0, 0), # big outer margin 1 for legend
+    mfrow=c(5, 4),       # 5x4 matrix of plots, fill by row
+    mar=c(4, 4, 3, 1),   # shrink margins 3 and 4
+    mgp=c(2.4, 1, 0),    # move axis labels nearer to axes
+    bg="grey96")         # plot background color
+
+## reduce opacity for a grayscale effect
+myblack <- adjustcolor("black", alpha.f=0.15)  
+
+myplot <- function(id) { # scatterplot of x[id]-y[id]
+  main <- paste0("x[", id, "] - y[", id,"]") # for legend()
+  xlab  <- paste0("x[", id, "]")
+  ylab  <- paste0("y[", id, "]")
+  plot(X[,id], Y[,id], main=main, type="p", pch=19,
+       xlab=xlab, ylab=ylab, col=myblack, bty="n",
+       xlim = c(min(X[,id])-0.1, max(X[,id]+0.1)),
+       ylim = c(min(Y[,id])-0.1, max(Y[,id])+0.1))
+  ## add true values
+  points(xt[id], yt[id], col='red', pch=3, cex=2)
+  ## add median values
+  medx <- median(X[ , id])
+  medy <- median(Y[ , id])
+  points(medx, medy, col='red', pch=1, cex=2)
+  ## add data values
+  points(xo[id], yo[id], col='skyblue', pch=1, cex=2)
+}
+
+for (i in 1:20) myplot(i) # fill the 20 panels
+
+## horizontal legend at bottom
+## first overlay the entire figure region with an empty plot
+par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0), 
+    mar = c(0, 0, 0, 0), new = TRUE)
+plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
+## now add the legend to the empty plot
+legend("bottom", horiz=TRUE, bty="n", xpd=TRUE,
+       inset=c(0, 0), cex=1.5, pt.cex=2,
+       legend=c("", "samples", "sample median       ", "true", "data"),
+       pch=c(NA, 1, 1, 3, 1), 
+       col=c(NA, "black", "red", "red", "skyblue")
+)
+```    
+
+# The MAP  
+
+In the following chunk we make a scatterplot of $a$ and $b$, indicating the MAP, the median, and the true values.  
+
+```{r MAP, fig.cap=fig.cap}
+## find the MAP
+jmap <- which.max(logpost)
+amap <- a[jmap]
+bmap <- b[jmap]
+
+## scatterplot of a,b
+par(mgp=c(2.5,1,0),     # move axis labels closer to axes
+    mar=c(4.2,4,1,1),   # reduce margins 3,4
+    bg="gray97")        # background color
+myblue25 <- adjustcolor("skyblue", alpha.f=0.25)
+plot(a, b, type="p", pch=16, col=myblue25,
+     xlab="a", ylab="b", bty="l", cex.lab=1.2,
+     panel.first=grid(),
+     xlim=range(a, alm), ylim=range(b, blm)+c(-0.1, 0.1))
+## add MAP to plot
+points(amap, bmap, pch=17, col="red"  ) # MAP
+points(1   ,    1, pch= 3, col="black") # true
+points(alm ,  blm, pch= 0, col="black") # lm()
+points(median(a), median(b), pch=8, col="black")
+
+legend("topright", bty="n", inset=0.05, 
+       legend=c("samples", "MAP", "medians", "true", "lm() fit"), 
+       pch=c(16, 17, 8,  3, 0), pt.cex=c(1.5, 1, 1, 1), 
+       col=c("skyblue", "red", "black", "black", "black") 
+)
+
+fig.cap <- "**Figure 4.** Samples from the posterior, with the
+            MAP estimate, the medians of _a_ and _b_, the true 
+            values of _a_ and _b_, and the best-fit values from
+            _lm()_, way out in the upper left corner."
+```  
+
+# Posterior prediction  
+
+Make a figure here like Figure 8 in `Frazer_A8-GSV2`.
+
+
+
+
+
