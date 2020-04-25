@@ -1,0 +1,24 @@
+
+model in bug
+data  in data.R
+
+load glm
+
+compile, nchains(3)
+
+inits in inits1.R, chain(1)
+inits in inits2.R, chain(2)
+inits in inits3.R, chain(3)
+
+initialize
+
+update 400
+
+monitor  alpha, thin(2)
+monitor  beta,  thin(2)
+monitor  sigma, thin(2)
+
+update 800
+
+coda *
+

@@ -1,0 +1,24 @@
+datafile	c	dump	rm	source
+makeDataFile	~	abline	c	coef	legend	lm	par	paste	plot	round	title	x	y
+modelfile	writeLines
+makeInitialValueFiles	c	dump	for	if	log	paste0
+commandfile	writeLines
+readSampleFiles	read.coda	require
+create_mcmc.list	as.mcmc.list	chain1	chain2	chain3	list
+summaryStatistics	$	chains	kable	options	summary
+summaryQuantiles	$	chains	kable	options	summary
+traceplots	c	chains	par	traceplot
+densityplots	c	chains	densplot	par
+autocorrelationPlots	autocorr.plot	c	chain1	par
+crossCorrelations	chains	crosscorr	kable	options
+crosscorrPLot	chains	crosscorr.plot
+usediagMCMC	chains	diagMCMC	varnames
+plotPost1	bquote	c	chains	par	plotPost
+posteriors	[<-	as.matrix	c	ceiling	chains	floor	for	legend	length	lines	matrix	mean	par	plot	seq	sort	x	y
+postpred	[<-	a	b	c	eti	for	jq1	jq2	legend	lines	matrix	nn	nx	par	plot	rnorm	samples	sort	x	xbar	xx	y
+usingAutorun.jags	autorun.jags	c	cleanup.jags	list	log	modelString	require
+extractSamples	$	results
+lookAtSigma	chains	diagMCMC	varnames
+sigmaUsingPlotPost	bquote	c	chains	par	plotPost
+runjagsResults	options	print	results
+runjagsPlot	c	plot	results

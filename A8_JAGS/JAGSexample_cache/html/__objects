@@ -1,0 +1,24 @@
+datafile	x	y
+makeDataFile	lmfit	s1	s2
+modelfile	modelString
+makeInitialValueFiles	alpha	alphas	beta	betas	iChain	logsigma	logsigmas	nChains
+commandfile	cmdFileString
+readSampleFiles	chain1	chain2	chain3
+create_mcmc.list	chains
+summaryStatistics	
+summaryQuantiles	
+traceplots	
+densityplots	
+autocorrelationPlots	
+crossCorrelations	
+crosscorrPLot	
+usediagMCMC	
+plotPost1	ppstAlpha	ppstBeta	ppstSigma
+posteriors	a	b	eti	ix	jq1	jq2	nn	nx	postmu	samples	xbar	xx
+postpred	etpp	ix	postmu	ppy	sd	.Random.seed
+usingAutorun.jags	data	inits	results	x	y
+extractSamples	chains
+lookAtSigma	
+sigmaUsingPlotPost	ppst1	ppst2	ppst3
+runjagsResults	
+runjagsPlot	

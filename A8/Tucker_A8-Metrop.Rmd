@@ -444,14 +444,14 @@ posterior <- function(xo,yo,x,a,b,lnsx,lnsy,nu=2,log=FALSE){
 psdx = 0.1
 psdy = 0.1
 pa = 0.9
-psda = 0.05
+psda = 0.2
 pb = 1.1
-psdb = 0.1
+psdb = 0.2
 
 #compute some generic stuff
 
-sdlnsx = 0.01 #log(psdx)
-sdlnsy = 0.01 #log(psdy)
+sdlnsx = 0.1 #log(psdx)
+sdlnsy = 0.1 #log(psdy)
 xoc = xo - mean(xo)
 
 

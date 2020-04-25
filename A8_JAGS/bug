@@ -1,0 +1,13 @@
+model {
+  for (i in 1:length(x)) {
+     y[i]  ~ dnorm(mu[i], tau)
+    mu[i] <- alpha + beta * (x[i] - x_bar)
+  }
+  x_bar <- mean(x)
+  alpha  ~ dunif(-10,10)
+  beta   ~ dunif(-10,10)
+  logsigma ~ dunif(-5,5)
+  sigma   <- exp(logsigma)
+  tau <- 1/sigma^2
+}
+

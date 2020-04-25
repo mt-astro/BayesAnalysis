@@ -1,0 +1,729 @@
+---
+title: "BrokenStick"
+author: "Michael Tucker"
+date: "2020-04-24"
+output: 
+  html_document: 
+    theme: cerulean #paper #cosmo #journal #readable
+    toc: true
+    smooth_scroll: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---  
+
+<style type="text/css">  
+/* Note: CSS uses C-style commenting. */
+h1.title{font-size:22px; text-align:center;}
+h4.author{font-size:16px; text-align:center;}
+h4.date{font-size:16px; text-align:center;}
+body{ /* Normal  */ font-size: 13px}
+td {  /* Table   */ font-size: 12px}
+h1 { /* Header 1 */ font-size: 16px}
+h2 { /* Header 2 */ font-size: 14px}
+h3 { /* Header 3 */ font-size: 12px}
+.math{ font-size: 10pt;}
+.hi{ /* hanging indents */ 
+    padding-left:22px; 
+    text-indent:-22px;
+}
+blockquote {  
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+code.r{ /* code */ 
+       font-size: 12px;
+}
+pre{/*preformatted text*/ 
+    font-size: 12px;
+}
+p.caption {/* figure captions */ 
+    font-size: 1.0em;
+    font-style: italic; 
+} 
+</style>
+
+```{r setup, echo=FALSE}
+rm(list=ls()) # clean up
+source("DBDA2E-utilities.R")
+library(knitr)
+library(coda)
+gr <- (1+sqrt(5))/2 # golden ratio, for figures
+opts_chunk$set(comment="  ",
+               #echo=FALSE,
+               cache=c(TRUE, FALSE)[1], 
+               #autodep=c(TRUE, FALSE)[1],
+               eval.after="fig.cap",
+               collapse=TRUE, 
+               dev="png",
+               fig.width=7.0,
+               out.width="95%",
+               fig.asp=0.9/gr,
+               fig.align="center"
+               )
+
+source("DBDA2E-utilities.R") # <-------------- NB
+## handy function to color text
+colorize <- function(x, color) {
+  ## x is a string
+  if (knitr::is_latex_output()) {
+    sprintf("\\textcolor{%s}{%s}", color, x)
+  } else if (knitr::is_html_output()) {
+    sprintf("<span style='color: %s;'>%s</span>", color, x)
+  } else x
+}
+mypar <- # convenience wrapper for par()
+function(mgp=c(2.8,1,0), mar=c(4.2,0,1,1), bg="gray97",...) 
+  par(mgp=mgp, mar=mar, bg=bg,...) 
+```  
+
+# Notes {-} 
+
+`r colorize("Your assignment", "red")` is to go to the section below titled "Model checking" and fill in the missing chunks of code. It is due April 24. My solution `Frazer_BrokenStick.html` is on our Laulima site in the BrokenStick folder, so you can see the target plots.  
+
+- Put the copy of `DBDA2E-utilities.R` `r colorize("that came with this assignment", "red")` in the same folder. It's OK, I think, to let it overwrite any copies that I sent you earlier.  
+
+- Don't forget to change the name of this file to (yourname)_BrokenStick.Rmd and change the author in the YAML.  
+
+- Get used to navigating in non-toy-size Rmd files like this by using the up and down buttons at the lower left of the RStudio editor pane. They will take you directly to named sections (think hashtags) and labeled chunks, which is why every chunk should have a label.  
+
+- The editor pane search (indicated by the magnifier symbol) will also get you around quickly.  
+
+# Introduction {-}  
+
+The theory for this document is based on Jonas K. Lindelov's [mcp package](https://lindeloev.github.io/mcp/), which uses JAGS to address the multiple changepoint problem. Andrew has a similar problem having to do with movements of the Pacific plate, which changes direction. His problem is a bit more complicated because the time values are also uncertain. That feature isn't difficult to handle, as you saw in A8-Metrop, A8-GS, A8-JAGS, and A8-Runjags, but this assignment focuses on posterior prediction, so we are keeping the rest of it as simple as possible.  
+
+# Single changepoint  
+
+We use the so-called cumulative changepoint formulation (because it generalizes nicely to multiple changepoints, although only one is needed here):    
+
+$$
+f(t) = f_1(t_1,\beta_1) + H(t-\xi)\,f_2(t_2,\beta_2) \tag{1}
+$$  
+
+in which  
+
+$$
+t_1 = \min(t,\xi);\ \ {\rm and}\ \ t_2=\max(t,\xi)-\xi \tag{2}
+$$  
+and $H(t-\xi)$ is a [Heaviside step function](https://en.wikipedia.org/wiki/Heaviside_step_function): equal to 0 if $t\lt\xi$ and equal to 1 if $t\ge\xi$. The quantities $\beta_1$ and $\beta_2$ are vectors of parameters.     
+
+# Simulated data  
+
+(I've come around to seeing that the biologists and social scientists are right: "simulated data" is a more accurate phrase than "synthetic data". There are too many alternative meanings for the word "synthetic".)  
+
+In the following chunk we generate some broken-stick data and plot it. On each side of the change point we have a simple linear model of the form $y=a+bt$. As a result of the cumulative changepoint formulation, the stick is continuous if the intercept of the second linear model is zero; all we need for it is a slope.    
+
+```{r simulateData, fig.cap="**Figure 1.** Simulated data for a broken stick problem. It might be truer to call it a bent stick because our process model is continuous at the break point."}
+set.seed(321)
+par(bg="gray97", mgp=c(2.5,1,0), mar=c(4,4,1,1))
+cp <- 5     # changepoint, Greek xi in the math above
+Nt <- 41    # number of times
+t <- seq(from=0, to=10, len=Nt) # time data
+a1 <-  1.00 # intercept of first segment
+b1 <- -0.25 # slope of first segment
+b2 <-  1.00 # slope of second segment
+lnsy <- log(0.5) 
+sy <- exp(lnsy) # SD of normal observation errors
+
+f <- function(t, cp, a1, b1, b2) {
+  ## See equation 1, above
+  t1 <- pmin(t, cp)       # Equation 2(a) and ?pmin
+  t2 <- pmax(t, cp) - cp  # Equation 2(b)
+  hs <- t > cp            # Heaviside step H(t-cp)
+  a1 + b1*t1 + hs*b2*t2 
+}
+
+yt <- f(t=t, cp=cp, a1=a1, b1=b1, b2=b2) # true y
+yo <- yt + rnorm(Nt, 0, sy)              # observed y
+
+## make figure
+ylim = range(yo) + c(-1,1)
+plot(t, yo, ylim=ylim, ylab="y", bty="n",
+     panel.first=grid())
+lines(t, yt, col="red")
+legend("top", bty="n", 
+       title="Broken Stick Model with Normal Errors",
+       legend=c("data", "true"),
+       pch=c(1,NA), col=c("black","red"),
+       lty=c(NA,1) )
+
+## Save true values for later
+cpt <- cp
+a1t <- a1; b1t <- b1; b2t <- b2; 
+syt <- sy; lnsyt <- lnsy
+```  
+
+# JAGS model  
+
+In the following chunk we create a JAGS model for the process. Notice that it is a character string. Notice the quote signs in the chunk.  
+
+Notice that JAGS has a function called `step()`. It is listed in Table 9.1 on page 42 of the JAGS 4.3.0 User Manual. `step()` returns a value of type logical, but can be used in arithmetic expressions because the JAGS language (more properly the BUGS language---JAGS is just a dialect of BUGS) coerces logical values to 0's and 1's in arithmetic expressions. Most computer languages do that, I think.     
+
+```{r modelString}
+modelString <- "model { 
+  cp ~ dunif(cpmin, cpmax) 
+  a1 ~ dunif(a1min, a1max)  
+  b1 ~ dunif(b1min, b1max)
+  b2 ~ dunif(b2min, b2max)
+  lnsy ~ dunif(lnsymin, lnsymax)
+  sy <- exp(lnsy)
+  tau <- 1/(sy*sy)
+
+  for (i in 1:Nt) {
+    t1[i] <- min(t[i], cp)
+    t2[i] <- max(t[i], cp) - cp
+    mu[i] <- a1 + b1*t1[i] + step(t[i]-cp)*b2*t2[i] 
+    yo[i]  ~ dnorm(mu[i], tau)
+  }
+}"
+```  
+
+# The data list  
+
+In the following chunk we create a list of data for `run.jags()`.  
+
+```{r datalist}
+cpmin <- t[1]+1; cpmax <- t[Nt] - 1
+a1min <- -5; a1max <- 5
+b1min <- -5; b1max <- 5
+b2min <- -5; b2max <- 5
+lnsymin <- log(0.01); lnsymax <- log(100)
+data <- list(Nt=Nt, t=t, yo=yo,
+             cpmin=cpmin, cpmax=cpmax,
+             a1min=a1min, a1max=a1max,
+             b1min=b1min, b1max=b1max,
+             b2min=b2min, b2max=b2max,
+             lnsymin=lnsymin, lnsymax=lnsymax)
+```
+
+# Initial values list  
+
+Here we create an initial value list for each chain. We must be careful to include initial values for _all_ the parameters. Here I specified the number of chains as 3 because I don't know how many cores your laptop has. You can find out by typing `parallel::detectCores()` in the console. My laptop has 8 cores, so I would optimally specify 7 chains, which leaves one core free for surfing while JAGS runs.  
+
+```{r initialvalues}
+set.seed(12)
+nChains <- 3 # detectCores() - 1 is best
+inits <- vector(mode="list", length=nChains) # preallocate
+for (ic in 1: nChains) {
+  cp <- runif(1, cpmin, cpmax)
+  a1 <- runif(1, a1min, a1max)
+  b1 <- runif(1, b1min, b1max)
+  b2 <- runif(1, b2min, b2max)
+  lnsy <- runif(1, lnsymin, lnsymax)
+  inits[[ic]] <- # element ic of the list called inits
+    list(cp=cp, a1=a1, b1=b1, b2=b2, lnsy=lnsy)
+}
+```  
+
+# `runjags()`   
+
+In the following chunk we call `run.jags()` to get our samples.  
+
+```{r runrunjags, collapse=TRUE}
+burnin <- 1000
+results <- 
+  run.jags(model=modelString,
+           data=data,
+           n.chains=3,
+           adapt=1000,
+           burnin=burnin,
+           sample=2000,
+           thin=2,
+           method="parallel",
+           inits=inits,
+           #modules="glm",
+           monitor=c("cp","a1","b1","b2","lnsy", "sy")
+          )
+# If the above doesn't work, use failed.jags() without any arguments in the command window to get some suggestions.  
+cleanup.jags() # cleanup failed runs 
+```  
+
+# Extract samples  
+The function `run.jags()` creates an object of class `runjags`, a named list that has a lot of stuff in it. The first element of a runjags object contains the actual samples, and it has the name `mcmc`. Since our runjags object is called `results`, we extract the samples as `results$mcmc`. (Yes, `results` is a poor name for anything.)      
+
+```{r extractSamples}
+chains <- results$mcmc # get samples from runjags object
+class(chains)          # mcmc.list object. See appendices
+```   
+
+# coda::traceplot()
+In the following chunk I use `coda::traceplot()` to make a traceplot of each chain. `traceplot()` knows what to do with an object of class `mcmc.list` such as `chains`; it makes a traceplot for each chain in `chains`. Each chain has a different color in the traceplots.   
+
+```{r traceplots1, fig.asp=0.25}
+par(mar=c(3,4,2,1), mgp=c(2,0.7,0), mfcol= c(1,3))
+traceplot(chains)
+```  
+_**Figure 2**. Traceplots made using `coda::traceplot(chains)`. This function is smart enough to find each variable in an object of class `mcmc.list` and combine the results for different chains._  
+
+If I wanted just the traceplots for `cp` I would type `traceplot(chains[,"cp"])` as in the following chunk. For variety, I used `traceplot(chains[,"cp"], type="p", pch=".", cex=3)`.  
+
+```{r traceplots2, fig.asp=0.4, fig.cap="**Figure 3.** Using `traceplot() to show all chains for a single variable."}
+par(mar=c(3,4,2,1), mgp=c(2,0.7,0))
+traceplot(chains[,"cp"], ylab="cp", type="l", cex=3, bty="n")
+```  
+
+Suppose you want the traceplot of a single variable for a single chain. The following chunk shows how.    
+```{r traceplots3, fig.asp=0.4, fig.cap="**Figure 4.** Demonstrating `traceplot()` for a single chain and single variable."}
+par(mar=c(3,4,2,1), mgp=c(2,0.7,0))
+traceplot(chains[[1]][,"b1"], ylab="b1", type="l", bty="n")
+```
+
+
+# coda::densplot()    
+In the following chunk I use `coda::densplot()` to plot the posterior PDF for each stochastic variable that was _monitored_ by JAGS. Recall the `monitor` argument in the above call to `run.jags()`.  
+
+```{r demodensplot1, fig.asp=0.25}
+par(mar=c(3,4,2,1), mgp=c(2,0.7,0), mfcol= c(1,3))
+#densplot(chains[,"cp"])  # works
+densplot(chains)
+```  
+_**Figure 5**. Density plots (effectively smoothed histograms) made using `coda::densplot(chains)`. Like `traceplot()`, this function is smart enough to find each variable in an object of class `mcmc.list` and combine the results for different chains. However it isn't nearly as sophisticated as Kruschke's `plotPost()` and `diagMCMC()`._    
+
+To make a density plot for a single variable (`b2`, for example), combining the samples from different chains, we use `densplot(chains[,"b2"])` as in the following chunk.  
+
+```{r demodensplot2, fig.asp=0.4, fig.cap="**Figure 6.** Demonstrating `densplot()` for combined chains and single variables."}
+par(mar=c(4,4,2,1), mgp=c(2,0.7,0), mfrow=c(1,2), bg="gray96")
+#densplot(chains[,"cp"])  # works
+densplot(chains[,"b1"], xlab="b1", cex.lab=1.1, ylab="density",
+         panel.first=grid(), bty="n")
+densplot(chains[,"b2"], xlab="b2", cex.lab=1.1, ylab="density",
+         panel.first=grid(), bty="n")
+```  
+
+To make a density plot for a single variable (e.g., `sy`) from a single chain, (e.g.,chain 2) we use `densplot(chains[[2]][,"sy"])` as in the following chunk.  
+```{r demodensplot3, fig.asp=0.4, fig.cap="**Figure 7.** Demonstrating `densplot()` for one variable and three chains. You can see that the chains are slightly different, as expected for a relatively small number of samples."}
+par(mar=c(4,4,2,0), mgp=c(2,0.7,0), mfrow=c(1,3), bg="gray96")
+#densplot(chains[,"cp"])  # works
+
+## left panel
+densplot(chains[[1]][,"sy"], xlab="sy for chain 1", 
+         cex.lab=1.2, ylab="density",
+         panel.first=grid(), bty="n")
+abline(v=syt, col="red", lty=2, lwd=2)
+
+## middle panel
+par(mar=c(4,1,2,0))
+densplot(chains[[2]][,"sy"], xlab="sy for chain 2", 
+         cex.lab=1.2, yaxt="n",
+         panel.first=grid(), bty="n")
+abline(v=syt, col="red", lty=2, lwd=2)
+
+## right panel
+densplot(chains[[3]][,"sy"], xlab="sy for chain 3", 
+         cex.lab=1.2, yaxt="n",
+         panel.first=grid(), bty="n")
+abline(v=syt, col="red", lty=2, lwd=2)
+```  
+
+## separate chains redux  
+
+The above figure is OK, but maybe we want to put all three densities on the same axes. We can do that with good old `base::density()`.  
+
+```{r demodensplot4, fig.asp=0.5, fig.width=6.5, out.wdith="80%", fig.cap="**Figure 8.** Density of sy for each chain, on the same axes."}
+par(mar=c(4,1,2,1), mgp=c(2.5,0.7,0), bg="gray96")
+
+## chain 1
+den1 <- density(chains[[1]][,"sy"])
+den2 <- density(chains[[2]][,"sy"])
+den3 <- density(chains[[3]][,"sy"])
+
+yul <- max(den1$y, den2$y, den3$y)
+ylim <- c(0, 1.05*yul)
+
+plot(den1$x, den1$y, type="l", lty=1, ylim=ylim,
+     bty="n", yaxt="n", ylab="n", yaxs="ir", cex.lab=1.1,
+     xlab=expression(sigma[y]*" for various chains"))
+lines(den2$x, den2$y, lty=2)
+lines(den3$x, den3$y, lty=3)
+
+abline(v=syt, col="red", lty=2, lwd=2) # add true value
+legend("topright", bty="n", inset=0.05,
+       title=expression("Posterior density of "*sigma[y]), 
+       legend=c("chain 1", "chain 2", "chain 3", "true value"),
+       lty=c(1,2,3,2), lwd=c(1,1,1,2),
+       col=c(rep("black",3), "red")
+)
+```  
+
+# summary()    
+
+Recall the generic R function `summary()`. Not surprisingly the coda package provides a method for `summary()`. We don't have to remember the names of the methods `summary.mcmc()` and `summary.mcmc.list()` because `summary()` will find them automatically. The output from `summary()` is a list containing the element `statistics` and the element `quantiles`. Remember that to extract an element of a list we can use the selection operator `$`. Thus `summary(chains)$statistics` will be a matrix containing things like mean and standard deviation, and `summary(chains)$quantiles` will be a matrix of quantiles. (We don't have to memorize the foregoing; we can always use `str()` to find out what is inside any R object.)  
+
+We'll use `knitr::kable()` to print the summary, because the result is more attractive than that from `print()`.  
+
+```{r summaryStatistics}
+options(digits=3)
+  kable(summary(chains)$statistics, align="c", 
+        caption="**Table 1.** Summary statistics for the broken stick model.")
+```  
+
+## Flavors of standard error    
+
+What is the difference between standard error and time-series standard error? Recall the [standard error of the mean](https://en.wikipedia.org/wiki/Standard_error#Standard_error_of_the_mean) $s_{\bar x}\approx {s_x}/\sqrt{n}$ in which $n$ is the number of samples, ${\bar x}$ is the sample mean, and $s_x$ is the sample standard deviation. In other words, the SE of the sample _mean_ is the SD of the _sample_ divided by the square root of the number of samples. In MCMC computations this is referred to as the _naive SE_ because it ignores the fact that the MCMC samples are not independent; i.e., they are always somewhat autocorrelated. Let's dissect the statistics in `results` to confirm that the foregoing definition predicts the naive SE for `cp` in the above table.  
+```{r naiveSE}
+summary(chains)$statistics # What's in there? Ah, a matrix!
+
+Ns <- nrow(as.matrix(chains)) # number of samples
+sampleSD_cp <- summary(chains)$statistics["cp","SD"] # SD of cp
+naiveSE1_cp <- sampleSD_cp/sqrt(Ns) # naive SE from SD and Ns
+naiveSE2_cp <- summary(chains)$statistics["cp","Naive SE"] # runjags
+all.equal(naiveSE1_cp, naiveSE2_cp) # TRUE
+```  
+
+Evidently it does. Now what about the time-series SE? The name "times-series SE" comes from the fact that the elements of most time series are highly autocorrelated. If they weren't, the time series would have no discerible pattern. So in the definition of SE we need to replace the number of samples $n$ by the effective number of samples (ESS), given approximately by equation (7.1) on page 184 of our textbook. However, the situation is a bit more complicated in the case of multiple chains---see[here](https://stats.stackexchange.com/questions/74450/naive-se-vs-time-series-se-which-statistics-should-i-report-after-bayesian-esti) for a more exact summary.     
+
+# Quantiles  
+In the following chunk I use `knitr::kable()` to print the table of quantiles.  
+
+```{r summaryQuantiles}
+options(digits=2)
+kable(summary(chains)$quantiles, align="c", caption="**Table 2.** Posterior quantiles for the broken stick model.")
+```  
+
+# `plot()`  
+
+The `plot()` function even has a method for runjags objects. To see what it does set `eval=TRUE` in the header of the following chunk. The resulting figure isn't something you would ever want to use in a publication, although it is a quick method to use interactively. (I don't know why it leaves so much space beneath the figure.)       
+
+```{r plot, eval=FALSE, fig.asp=0.7, fig.cap="**Figure 9.** Demonstrating the `plot` method for objects of class `runjags`."}
+plot(results)
+```  
+
+
+# Kruschke diagnostics  
+
+Here we use Kruschke's utility functions `diagMCMC()` and `plotPost()` (from the edited version of `DBDA2E-utilities.R` that I sent you) to make diagnostic plots suitable for publication. We use the changepoint `cp` as an example.  
+
+## `coda::varnames()`  
+
+Kruschke's diagnostics let us specify which variables we want to diagnose. To see what variables are inside an mcmc object, or mcmc.list object, the coda package gives us the function `varnames()`.   
+
+```{r varnames}
+varnames(chains) # "cp"   "a1"   "b1"   "b2"   "lnsy" "sy"
+```  
+
+## `diagMCMC()`  
+
+I like it that `diagMCMC()` shows the individual chains not only in the traceplot but also in the density plot (lower right panel of the following figure).  
+
+```{r diagMCMC, fig.cap="**Figure 10.** Diagnostics of the changepoint using `diagMCMC()`"}
+diagMCMC(chains, parName="cp")
+```  
+
+## DbdaDensPlot()  
+
+If you look inside `diagMCMC()` you will see that it calls `coda::traceplot()`, `coda::gelman.plot()`, `DbdaAcfPlot()`, and `DbdaDensPlot()`. The last two functions are in `DBDA2E-utilities.R` and we can call them individually if we want, as in the following chunk.  
+
+```{r demoDbdaensPlot, fig.asp=0.4, fig.cap="**Figure 11.** Demonstrating Kruschke's function `DbdaDensPlot(). Vertical lines indicate true values, i.e., the values used to simulate the data."}
+par(mgp=c(2,0.7,0), mfrow=c(1,3), bg="gray96")
+col <- "magenta"
+## left panel
+par(mar=c(4,4,2,1)) 
+DbdaDensPlot(chains[,"cp", drop=FALSE], parName="cp", xlab="cp",
+             bty="n", yaxt="s")
+abline(v=cpt, col=col, lty=1, lwd=1) # add true value
+## center panel  
+par(mar=c(4,0,2,1))
+DbdaDensPlot(chains[,"b1", drop=FALSE], parName="b1", xlab="b1",
+             bty="n", yaxt="n")
+abline(v=b1t, col=col, lty=1, lwd=1) # add true value
+## right panel
+DbdaDensPlot(chains[,"b2", drop=FALSE], parName="b2", xlab="b2",
+             bty="n", yaxt="n")
+abline(v=b2t, col=col, lty=1, lwd=1) # add true value
+```
+
+
+
+## `plotPost()`  
+
+The definition of Kruschke's `plotPost()`, from the version of `DBDA2E-utilities.R` `r colorize("that came with this assignment", col="red")` begins with the following lines:  
+
+```
+plotPost <- function( # from J.K.Kruschke's DBDA2E-utilities.R
+  paramSampleVec , 
+  cenTend = c("mode","median","mean")[2] , 
+  compVal = NULL, 
+  ROPE = NULL, 
+  credMass = 0.95, 
+  HDItextPlace = 0.7, 
+  xlab = "Param. Val." , 
+  xlim = range( c( compVal , ROPE , paramSampleVec ) ) , 
+  yaxt = "n" , 
+  ylab = "" , 
+  main = "" , 
+  cex = 1.4 , 
+  cex.lab = 1.5 ,
+  col = "skyblue" , 
+  border = "white" , 
+  showCurve = FALSE , 
+  breaks = NULL , 
+  ... ) 
+```  
+
+We call `plotPost()` repeatedly in the following chunk:  
+
+```{r plotPost, fig.cap="**Figure 12.** Posterior densities using `plotPost()`. The true values, i.e., the values used to simulate the data, are indicated by the vertical red lines."}
+## top row of plots
+par(mar=c(4,1,2,1), mgp=c(2.5,0.7,0), mfrow= c(2,3), bg="gray96")
+lty <- 1; lwd=1
+postSummary_cp <- 
+  plotPost( chains[,"cp"], main="", #xlim=c(1,5),
+            xlab="cp", cenTend="median")
+abline(v=cpt, col="red", lwd=lwd, lty=lty)
+postSummary_a1 <- 
+  plotPost( chains[,"a1"], main="", #xlim=c(-1,2),
+                   xlab="a1", cenTend="median")
+abline(v=a1t, col="red", lwd=lwd, lty=lty)
+postSummary_b1 <- 
+  plotPost( chains[,"b1"], main="", #xlim=c(0,3.5),
+            xlab="b1", cenTend="median")
+abline(v=b1t, col="red", lwd=lwd, lty=lty)
+
+## bottom row of plots
+par(mar=c(5,1,2,1))
+postSummary_b2 <- 
+  plotPost( chains[,"b2"], main="", #xlim=c(0,3.5),
+            xlab="b2", cenTend="median")
+abline(v=b2t, col="red", lwd=lwd, lty=lty)
+postSummary_sy <- 
+  plotPost( chains[,"sy"], main="", #xlim=c(0,3.5),
+            xlab="sy", cenTend="median")
+abline(v=syt, col="red", lwd=lwd, lty=lty)
+postSummary_lnsy <- 
+  plotPost( chains[,"lnsy"], main="", #xlim=c(0,3.5),
+            xlab="lnsy", cenTend="median")
+abline(v=lnsyt, col="red", lwd=lwd, lty=lty)
+```
+
+
+# Model checking    
+
+Here we do _posterior prediction_ to check our model. The method is the same as that used in `JAGSexample.html` which can be viewed on our Laulima site if you cannot knit the Rmd. The same method is also used in `Frazer_A8-GSV2.html` which is also on our Laulima site. 
+
+## Theory    
+
+Kruschke discusses posterior predictive checks on pp. 28-29, and uses them in specific cases later in the book. Formally, the posterior predictive distribution is defined by  
+
+$$
+p(D_p\mid D) = \int \! d\beta\, p(D_p\mid\beta)\, p(\beta\mid D)
+$$  
+in which $D_p$ is the predicted data, $p(D\mid\beta)$ is the sampling distribution, and $p(\beta\mid D)$ is the posterior.  
+
+To sample from the posterior predictive we draw a sample $\beta^{(j)}$ from $p(\beta\mid D)$ and then a sample $D_p^{(j)}$ from $p(D\mid\beta^{(j)})$. In applications we already have the samples $\beta^{(j)}$ so it is easy to generate the $D_p^{(j)}$ if we wish.  
+
+Statistics notation: If you want to emphasize that a draw $\beta^{(j)}$ is from $p(\beta\mid D)$ and not any old $p(\beta)$, write $\beta^{(j)}\mid D$. Thus it is syntactically correct,^[In discussions of human languages, computer languages, and mathematics, it is helpful to remember that _syntax is form, semantics is meaning_.] if slightly redundant, to write $\beta^{(j)}\mid D \sim p(\beta\mid D)$.  
+
+# CI's and PI's  
+
+Now that we have a suite of samples we can estimate a _credibility interval_ (CI) for the unknown true $y$ (call it `yp`) at any specified value of $x$, and a _prediction interval_ (PI) for the y-value we would observe there (call it `yop`). As an example, let's do that at $t=$ `r (tp <- 7)`.  
+
+(`r colorize("Complete the code chunk here", col="red")` to generate `yp` and `yop` at $t=$ `r tp`.)
+
+```{r CI_and_PI_samples_at_t_equals_2, fig.asp=0.6, fig.cap="**Figure 13.** Model checking with 95% credibility bounds for the true value of y, and 95% prediction bounds for the observed values of y. The PI and CI lines are somewhat irregular because extreme quantiles are sensitive to the number of samples. More samples would make for smoother lines."}
+#taken from the JAGSexample.Rmd and modified as necessary
+
+samples = as.matrix(chains) # unpack results
+cp = samples[,"cp"]
+a1 = samples[,"a1"] 
+b1 = samples[,"b1" ] 
+b2 = samples[, "b2"]
+lnsy = samples[,"lnsy"]
+sy = samples[, 'sy']
+
+nn <- length(a1)
+tt = seq(0., 10., by=0.1)
+nt = length(tt)
+eti = matrix(0,nrow=2,ncol=nt) # matrix of equal-tailed intervals
+jq1 <- floor(0.025*nn)          # index of  2.5 percentile
+jq2 <- ceiling(0.975*nn)        # index of 97.5 percentile
+for(it in 1:nt) {
+  postmu <- f(tt[it], cp, a1, b1, b2)
+  postmu <- sort(postmu)
+  eti[1,it] <- postmu[jq1] # 2.5  percentile for a + bx
+  eti[2,it] <- postmu[jq2] # 97.5 percentile for a + bx
+}
+
+# seemed redundant, decided to omit
+## plot 95% posterior CI's for a + bx
+#par(mar=c(4.1,4.1,1,2)) # margin control
+#plot(t,yo,type="b", lty=3, xlim=c(0.0, 10.0), ylim=c(-3.0, 8.0)) # data
+#lines(x=tt, y=eti[1,], lty=2, col="red") # 2.5  percentile
+#lines(x=tt, y=eti[2,], lty=2, col="red") # 97.5 percentile
+#legend("topleft", pch=c(1, NA), 
+#       col=c("black","red"), lty=c(3,2),
+#       legend=c("data", "95% CI"), 
+#       inset=0.05, bty="n")
+
+
+etpp <- matrix(0,nrow=2,ncol=nt) # storage
+for(it in 1:nt){ # x's for prediction
+  postmu <- f(tt[it], cp, a1, b1, b2) # means
+  sd <- samples[,"sy"] # sd's
+  ppy <- rnorm(nn, mean=postmu, sd=sd) # post-pred samples of a+bx
+  ppy <- sort(ppy) # sort em to find the equal-tailed intervals
+  etpp[1,it] <- ppy[jq1] #  2.5 percentile
+  etpp[2,it] <- ppy[jq2] # 97.5 percentile
+}
+
+## plot everything 
+par(mar=c(4.1,4.1,1,2))
+plot(t,yo,type="b", lty=3, xlim=c(0.0, 10.0), ylim=c(-2.0, 7.0))
+lines(x=tt, y= eti[1,], lty=2, col="red"    )
+lines(x=tt, y= eti[2,], lty=2, col="red"    )
+lines(x=tt, y=etpp[1,], lty=2, col="magenta")
+lines(x=tt, y=etpp[2,], lty=2, col="magenta")
+legend("topleft", inset=0.02, bty="n",
+       pch=c(1,NA,NA), 
+       col=c("black","red","magenta"), 
+       lty=c(3,2,2),
+       legend=c("data", "95% posterior CI", "95% posterior predictive CI")
+      )
+
+
+
+```  
+
+
+Those density plots looks reasonable in view of the data, which are in the neighborhood (1,2) for $t_p$=`r tp`. Accordingly, we now go ahead and repeat the calculation for a sequence of prediction times.  
+
+`r colorize("(Make Figure 14 here in the empty chunk.)", "red")`
+`Didnt see a Fig 14 on the laulima html?`
+
+
+Not surprisingly, 95% of our `r Nt` y-data fall within the 95% PI. It would be disturbing if they did not, because the model we used for data analysis is the same model we used to simulate the data. All we can conclude is that our data analysis procedure is self-consistent.  
+
+We know the true model (indicated on the figure in blue) so it is also comforting to see that our 95% CI for y includes it. You can see where some outlying data points have pulled the 95% CI away from the true model. That happens with real data all the time because any real observation process is stochastic, just as our simulated observation process is stochastic.  
+
+# Appendix I. Attributes {-}   
+
+An object of class mcmc is effectively a matrix of samples with some _attributes_ that carry information about how they were obtained. The following chunk demonstrates:  
+
+```{r Appendix1}
+class(chains[[1]]) # mcmc
+head(chains[[1]])  # head() has a method for class mcmc
+names(attributes(chains[[1]])) # what are they called?
+attributes(chains[[1]])$mcpar  # 2001 5999    2
+```  
+
+Accordingly, we digress for a moment to review attributes, which are a nifty way of attaching metadata to data, as well as a key part of R's most frequently used functional OOP system, called S3. Consider the following chunk:  
+
+```{r demoAttributes}
+## REVIEW
+## A vector is said to be atomic if all of its elements are of the
+## same storage type, e.g., numeric, logical, character, etc.
+## A list is a vector whose elements are allowed to be
+## of different types and sizes.
+
+## Naming the elements of a vector creates a names attribute
+zz <- c(a=2, c=-1, b=5) # atomic vector with named elements
+attributes(zz)$names  # "a" "c" "b"
+attr(zz, "names")     # "a" "c" "b"
+names(zz) # a" "c" "b" (convenience function)
+
+## The attributes of a vector are a list
+class(attributes(zz)) # list
+
+## Let's do this slightly differently  
+zz <- c(2, -1, 5) # no names yet
+attributes(zz)    # NULL
+attr(zz, "names") <- c("a", "c", "b")
+attr(zz, "names")    # "a" "c" "b"
+attributes(zz)$names # "a" "c" "b"
+zz
+
+## unname() is a convenience function. For example
+## unname(zz) is like attributes(zz)$names <- NULL
+## or attr(zz, "names") <- NULL
+unname(zz) # 2 -1 5
+
+## Give zz another attribute called "species"
+attr(zz, "species") <- "cat"
+attr(zz, "species")    # "cat"
+attributes(zz)$species # "cat"
+attributes(zz)$names   # "a" "c" "b"
+
+## A list is a vector. We name its elements the same way.  
+zz <- list(2, "rats", TRUE) 
+attr(zz, "names") <- c("a", "c", "b")
+attr(zz, "names") # "a" "c" "b"
+attr(zz, "genus") <- "rodent"
+attr(zz, "genus") # "rodent"
+attributes(zz)$names # "a" "c" "b"
+attributes(zz)$genus # "rodent"
+zz
+rm(zz)
+```  
+
+# Appendix II. Class mcmc {-} 
+
+Now that we've reviewed how attributes work (Appendix I), we can confidently dissect objects of class `mcmc`. An mcmc object is basically a matrix with some extra attributes to carry information about the sampling process that produced it. Altogether it has four attributes: `class`, `dim`, `dimnames` and `mcpar`. We examine these in turn:  
+
+- The `class` attribute is always `mcmc`. The runjags package creates _methods_ for objects of class mcmc. For example, `plot.mcmc()`is a plot method for class mcmc.  `plot()` is a _generic function_, so when you call `plot()` it looks at the class of its x-argument. If the class of that argument is mcmc then `plot()` calls `plot.mcmc()` which knows what to do with objects of class mcmc.   
+- The `dim` attribute is an unnamed numeric 2-vector. Its first element is the number of rows in the matrix. It's second element is the number of columns.  
+- The `dimnames` attribute is a list of 2. The first element of the list is a long **character** vector of rownames, for example "2001" "2002"..."5000". The second element of the list is a character vector of column names; in the present example it is the character vector `c("cp", "a1", "b1", "b2", "lnsy")`.  
+- The `mcpar` attribute is a numeric 3-vector. Its first element is the sample number of the _first_ sample saved; its second element is the sample number of the _last_ sample saved. It's third element is the thinnning interval, which is 1 for no thinning, 2 if only every second sample is kept, 3 if only every third sample is kept, and so forth.  
+- The subset function `[` has methods for classes mcmc and mcmc.list. For example, if `chains` is an mcmc.list object then `chains[,"cp"]` returns an mcmc.list object with only the samples for `cp`.  
+
+```{r demoSubset}
+## subsetting mcmc.list objects
+class(chains) # mcmc.list
+varnames(chains) # "cp"   "a1"   "b1"   "b2"   "lnsy" "sy"
+class(chains[,"cp"]) # mcmc.list
+class(chains[, c("b1","b2")]) # mcmc.list
+
+## subsetting mcmc objects
+class(chains[[2]]) # mcmc
+varnames(chains[[2]]) # "cp"   "a1"   "b1"   "b2"   "lnsy" "sy"
+class(chains[[2]][,"cp"]) # mcmc
+class(chains[[2]][,c("b1", "b2")]) # mcmc
+```
+
+- The functions `as.matrix()`, `plot()`, `traceplot()`, `densplot()`, and `summary()` have methods for object of class mcmc. For example if `chain1` is an mcmc object then `as.matrix(chain1)` is a matrix of samples from `chain1`.  
+
+# Appendix III. Class mcmc.list {-}  
+
+- An object of class mcmc.list is a list with one element for each chain, each element being an object of class mcmc.  
+- The function `as.matrix()` has a method for objects of class mcmc.list. For example, if `chains` has class mcmc.list then `as.matrix(chains)` is a matrix that aggregates the samples from _all_ the chains.
+- The functions `[`, `as.matrix()`, `plot()`, `traceplot()`, `densplot()`, and `summary()` all have methods for object of class mcmc.list.  
+
+# Appendix IV. Subset with `[` {-}  
+
+Recall that everything that happens in R is a function call. Subsetting is no exception. In other words, the square bracket subsetting operator `[ ]` is really a function. To call it like a regular function you put the left square bracket in backticks, like this `[` and add parentheses to hold the arguments. The following chunk demonstrates.  
+
+```{r demoSquareBracket}
+zz <- letters
+zz[4] # "d"
+`[`( zz, 4 ) # "d"
+
+zz[c(3, 5)] # "c" "e"
+`[`(zz, c(3,5))
+```
+
+The subset function `[` is generic, and has methods for mcmc.list objects and mcmc objects, as the following chunk demonstrates.  
+```{r squareBracket}
+class( chains[, "cp"]      )  # mcmc.list
+class( chains[[1]][, "cp"] )  # mcmc
+```  
+
+# Appendix V. as.matrix() {-}   
+
+To code our own diagnostics we will want to pull those samples out of `chains` and make them into a matrix. 
+
+Recall that `as.matrix()` is a generic function. The coda package has endowed it with a method for objects of class mcmc and a method for objects of class mcmc.list. An object of class mcmc has all the samples from a _single_ chain. An object of class mcmc.list is just a list, each element of which is an object of class mcmc. In other words, an object of class mcmc.list contains the samples from _multiple_ chains. The preceding appendices give the details.    
+
+The following chunk shows that when applied to an object of class mcmc `as.matrix()` converts it to a matrix of samples; they will be samples from a single chain. When applied to an object of class mcmc.list `as.matrix()` aggregates the samples from _all_ the chains into a single matrix. In the following chunk, notice that the number of rows in `as.matrix(chains)` is three times as large as the number of rows in `as.matrix(chains[[1]])` because I told `run.jags()` to make three chains.    
+
+```{r asMatrix}
+## chains has class mcmc.list
+## chains[[1]] has class mcmc
+head(as.matrix(chains[[1]])) # Each row is a sample
+dim(as.matrix(chains[[1]])) 
+head(as.matrix(chains))      # Each row is a sample
+dim(as.matrix(chains))       
+```  
+
+
